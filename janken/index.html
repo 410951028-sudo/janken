@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>猜拳對戰</title>
+
+<link rel="stylesheet" href="style.css">
+
+</head>
+
+<body>
+
+<div id="game">
+
+<!-- 玩家B -->
+<div class="player playerB">
+
+<div class="skillPad" id="padB">
+
+<div class="skill up" data-move="rock">👊</div>
+<div class="skill left" data-move="paper">🖐</div>
+<div class="skill right" data-move="scissors">✌️</div>
+<div class="skill down" data-move="cancel">❌</div>
+
+<div class="core" id="fistB">✊</div>
+
+</div>
+
+<div class="hpBar">
+<div class="hp" id="hpB"></div>
+</div>
+
+<div class="damage" id="damageB"></div>
+
+<div class="phase" id="phaseB"></div>
+
+</div>
+
+
+<!-- 玩家A -->
+<div class="player playerA">
+
+<div class="phase" id="phaseA"></div>
+
+<div class="damage" id="damageA"></div>
+
+<div class="hpBar">
+<div class="hp" id="hpA"></div>
+</div>
+
+<div class="skillPad" id="padA">
+
+<div class="skill up" data-move="rock">👊</div>
+<div class="skill left" data-move="paper">🖐</div>
+<div class="skill right" data-move="scissors">✌️</div>
+<div class="skill down" data-move="cancel">❌</div>
+
+<div class="core" id="fistA">✊</div>
+
+</div>
+
+</div>
+
+</div>
+
+<script src="app.js"></script>
+
+</body>
+</html>
