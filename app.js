@@ -1,280 +1,141 @@
-const game = {
 
-hpA:2000,
-hpB:2000,
+let hpA = 2000
+let hpB = 2000
 
-moveA:null,
-moveB:null,
+let phase = "scissor"
 
-round:1,
-maxRound:5
+let moveA = null
+let moveB = null
 
-}
-
-/* 顯示元素 */
-
-const statusA = document.getElementById("statusA")
-const statusB = document.getElementById("statusB")
-const roundInfo = document.getElementById("roundInfo")
-
-/* 階段顯示 */
-
-function setPhase(icon){
-
-document.getElementById("phaseA").innerText = icon
-document.getElementById("phaseB").innerText = icon
-
-}
-
-setPhase("✊")
-
-/* 傷害顯示 */
-
-function showDamage(player,amount){
-
-let el = document.getElementById("damage"+player)
-
-el.innerText = "-" + amount
-
-el.classList.remove("show")
-void el.offsetWidth
-el.classList.add("show")
-
-}
-
-/* HP更新 */
+let roundActive = false
 
 function updateHP(){
 
-document.getElementById("hpA").style.width = (game.hpA/2000*100) + "%"
-document.getElementById("hpB").style.width = (game.hpB/2000*100) + "%"
+document.getElementById("hpA").style.width = hpA/20+"%"
+document.getElementById("hpB").style.width = hpB/20+"%"
 
 }
 
-/* 技能高亮 */
+function setPhase(p){
 
-function highlightMove(player,move){
+document.querySelectorAll(".phase div").forEach(e=>e.classList.remove("active"))
 
-let pad = document.getElementById("pad"+player)
-
-pad.querySelectorAll(".skill").forEach(s=>{
-s.classList.remove("selected")
-})
-
-let btn = pad.querySelector(`[data-move="${move}"]`)
-
-if(btn){
-btn.classList.add("selected")
-}
+if(p==="scissor")document.getElementById("p_scissor").classList.add("active")
+if(p==="rock")document.getElementById("p_rock").classList.add("active")
+if(p==="paper")document.getElementById("p_paper").classList.add("active")
 
 }
 
-/* 更新玩家狀態 */
+function startRound(){
 
-function updateStatus(){
+roundActive = true
 
-statusA.innerText = game.moveA ? "已選：" + emoji(game.moveA) : "未選擇"
-statusB.innerText = game.moveB ? "已選：" + emoji(game.moveB) : "未選擇"
+phase="scissor"
+setPhase("scissor")
 
-}
+setTimeout(()=>{
+phase="rock"
+setPhase("rock")
+},1000)
 
-/* move轉emoji */
+setTimeout(()=>{
+phase="paper"
+setPhase("paper")
+},2000)
 
-function emoji(move){
-
-if(move==="rock") return "👊"
-if(move==="paper") return "🖐"
-if(move==="scissors") return "✌️"
-
-return "?"
-
-}
-
-/* 拖曳系統 */
-
-function enableDrag(fistId){
-
-const fist = document.getElementById(fistId)
-
-let startX=0
-let startY=0
-
-fist.addEventListener("pointerdown",e=>{
-
-startX=e.clientX
-startY=e.clientY
-
-fist.setPointerCapture(e.pointerId)
-
-})
-
-fist.addEventListener("pointerup",e=>{
-
-let dx=e.clientX-startX
-let dy=e.clientY-startY
-
-let move = detectDirection(dx,dy)
-
-if(move){
-
-triggerMove(fistId,move)
+setTimeout(()=>{
+resolveRound()
+},3000)
 
 }
 
-})
+function resolveRound(){
+
+roundActive=false
+
+let winner = rps(moveA,moveB)
+
+if(winner==="A"){
+
+let dmg = calcDamage(moveA)
+
+hpB -= dmg
+showDamage("damageB",dmg)
 
 }
 
-/* 判斷拖曳方向 */
+if(winner==="B"){
 
-function detectDirection(dx,dy){
+let dmg = calcDamage(moveB)
 
-const threshold=40
-
-if(Math.abs(dx)<threshold && Math.abs(dy)<threshold){
-return null
-}
-
-if(Math.abs(dx)>Math.abs(dy)){
-
-if(dx>0){
-return "scissors"
-}else{
-return "rock"
-}
-
-}else{
-
-if(dy<0){
-return "paper"
-}else{
-return "rock"
-}
+hpA -= dmg
+showDamage("damageA",dmg)
 
 }
 
-}
+updateHP()
 
-/* 玩家出招 */
-
-function triggerMove(player,move){
-
-if(player==="fistA"){
-
-game.moveA = move
-highlightMove("A",move)
+moveA=null
+moveB=null
 
 }
 
-if(player==="fistB"){
+function rps(a,b){
 
-game.moveB = move
-highlightMove("B",move)
+if(!a||!b)return null
 
-}
+if(a===b)return null
 
-updateStatus()
-
-checkRound()
-
-}
-
-/* 檢查是否兩人出招 */
-
-function checkRound(){
-
-if(game.moveA && game.moveB){
-
-setTimeout(resolveRound,500)
-
-}
-
-}
-
-/* 剪刀石頭布判定 */
-
-function judge(a,b){
-
-if(a===b) return "draw"
-
-if(
-(a==="rock" && b==="scissors")||
-(a==="scissors" && b==="paper")||
-(a==="paper" && b==="rock")
-){
-return "A"
-}
+if(a==="rock"&&b==="scissor")return "A"
+if(a==="scissor"&&b==="paper")return "A"
+if(a==="paper"&&b==="rock")return "A"
 
 return "B"
 
 }
 
-/* 結算回合 */
+function calcDamage(move){
 
-function resolveRound(){
+let r = Math.random()
 
-const result = judge(game.moveA,game.moveB)
+if(move==="scissor"){
 
-let damage = 700
-
-if(result==="A"){
-
-game.hpB -= damage
-showDamage("B",damage)
+return r<0.3?900:400
 
 }
 
-if(result==="B"){
+if(move==="rock")return 700
 
-game.hpA -= damage
-showDamage("A",damage)
+if(move==="paper")return 900
+
+}
+
+function showDamage(id,d){
+
+let el=document.getElementById(id)
+
+el.innerText="-"+d
+
+setTimeout(()=>el.innerText="",1000)
+
+navigator.vibrate(100)
 
 }
 
 updateHP()
 
-game.moveA=null
-game.moveB=null
+document.getElementById("center").addEventListener("touchstart",startRound)
 
-highlightMove("A",null)
-highlightMove("B",null)
+document.getElementById("up").onclick=()=>moveA="rock"
+document.getElementById("left").onclick=()=>moveA="paper"
+document.getElementById("right").onclick=()=>moveA="scissor"
+document.getElementById("down").onclick=()=>resolveRound()
 
-updateStatus()
+document.getElementById("restart").onclick=()=>{
 
-game.round++
-
-roundInfo.innerText = "Round " + game.round
-
-checkGameEnd()
-
-}
-
-/* 檢查遊戲結束 */
-
-function checkGameEnd(){
-
-if(game.hpA<=0 || game.hpB<=0 || game.round>game.maxRound){
-
-let winner="平手"
-
-if(game.hpA>game.hpB) winner="玩家A勝利"
-if(game.hpB>game.hpA) winner="玩家B勝利"
-
-setTimeout(()=>{
-alert("遊戲結束\n"+winner)
-location.reload()
-},600)
-
-}
-
-}
-
-/* 初始化 */
-
-enableDrag("fistA")
-enableDrag("fistB")
+hpA=2000
+hpB=2000
 
 updateHP()
-updateStatus()
 
-roundInfo.innerText = "Round 1"
+}
