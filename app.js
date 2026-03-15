@@ -6,7 +6,16 @@ hpB:2000,
 moveA:null,
 moveB:null,
 
+round:1,
+maxRound:5
+
 }
+
+/* 顯示元素 */
+
+const statusA = document.getElementById("statusA")
+const statusB = document.getElementById("statusB")
+const roundInfo = document.getElementById("roundInfo")
 
 /* 階段顯示 */
 
@@ -17,7 +26,7 @@ document.getElementById("phaseB").innerText = icon
 
 }
 
-setPhase("✌️")
+setPhase("✊")
 
 /* 傷害顯示 */
 
@@ -25,13 +34,59 @@ function showDamage(player,amount){
 
 let el = document.getElementById("damage"+player)
 
-el.innerText = amount
+el.innerText = "-" + amount
 
 el.classList.remove("show")
-
 void el.offsetWidth
-
 el.classList.add("show")
+
+}
+
+/* HP更新 */
+
+function updateHP(){
+
+document.getElementById("hpA").style.width = (game.hpA/2000*100) + "%"
+document.getElementById("hpB").style.width = (game.hpB/2000*100) + "%"
+
+}
+
+/* 技能高亮 */
+
+function highlightMove(player,move){
+
+let pad = document.getElementById("pad"+player)
+
+pad.querySelectorAll(".skill").forEach(s=>{
+s.classList.remove("selected")
+})
+
+let btn = pad.querySelector(`[data-move="${move}"]`)
+
+if(btn){
+btn.classList.add("selected")
+}
+
+}
+
+/* 更新玩家狀態 */
+
+function updateStatus(){
+
+statusA.innerText = game.moveA ? "已選：" + emoji(game.moveA) : "未選擇"
+statusB.innerText = game.moveB ? "已選：" + emoji(game.moveB) : "未選擇"
+
+}
+
+/* move轉emoji */
+
+function emoji(move){
+
+if(move==="rock") return "👊"
+if(move==="paper") return "🖐"
+if(move==="scissors") return "✌️"
+
+return "?"
 
 }
 
@@ -61,8 +116,6 @@ let dy=e.clientY-startY
 let move = detectDirection(dx,dy)
 
 if(move){
-
-console.log("出招:",move)
 
 triggerMove(fistId,move)
 
@@ -109,16 +162,18 @@ function triggerMove(player,move){
 if(player==="fistA"){
 
 game.moveA = move
-console.log("玩家A出",move)
+highlightMove("A",move)
 
 }
 
 if(player==="fistB"){
 
 game.moveB = move
-console.log("玩家B出",move)
+highlightMove("B",move)
 
 }
+
+updateStatus()
 
 checkRound()
 
@@ -130,7 +185,7 @@ function checkRound(){
 
 if(game.moveA && game.moveB){
 
-setTimeout(resolveRound,300)
+setTimeout(resolveRound,500)
 
 }
 
@@ -181,14 +236,36 @@ updateHP()
 game.moveA=null
 game.moveB=null
 
+highlightMove("A",null)
+highlightMove("B",null)
+
+updateStatus()
+
+game.round++
+
+roundInfo.innerText = "Round " + game.round
+
+checkGameEnd()
+
 }
 
-/* 更新血量 */
+/* 檢查遊戲結束 */
 
-function updateHP(){
+function checkGameEnd(){
 
-document.getElementById("hpA").style.width = game.hpA/20 + "%"
-document.getElementById("hpB").style.width = game.hpB/20 + "%"
+if(game.hpA<=0 || game.hpB<=0 || game.round>game.maxRound){
+
+let winner="平手"
+
+if(game.hpA>game.hpB) winner="玩家A勝利"
+if(game.hpB>game.hpA) winner="玩家B勝利"
+
+setTimeout(()=>{
+alert("遊戲結束\n"+winner)
+location.reload()
+},600)
+
+}
 
 }
 
@@ -198,3 +275,6 @@ enableDrag("fistA")
 enableDrag("fistB")
 
 updateHP()
+updateStatus()
+
+roundInfo.innerText = "Round 1"
