@@ -8,8 +8,11 @@ let phaseList = ["✌️","✊","🖐️"]
 let phaseIndex = 0
 
 function updateUI(){
-document.getElementById("hpA").innerText = hpA
-document.getElementById("hpB").innerText = hpB
+document.getElementById("hpAtext").innerText = hpA
+document.getElementById("hpBtext").innerText = hpB
+
+document.getElementById("hpAbar").style.width = (hpA/2000*100) + "%"
+document.getElementById("hpBbar").style.width = (hpB/2000*100) + "%"
 document.getElementById("phase").innerText = phaseList[phaseIndex]
 }
 
