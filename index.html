@@ -1,68 +1,33 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
-
 <head>
-
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<title>猜拳對戰</title>
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Janken Duel 1.0</title>
 <link rel="stylesheet" href="style.css">
-
-<link rel="manifest" href="manifest.json">
-
-<meta name="theme-color" content="#222">
-
 </head>
 
 <body>
 
-<div id="game">
+<h2>玩家A HP: <span id="hpA">2000</span></h2>
 
-<div class="player rotate">
+<div id="phase">✌️</div>
 
-<div class="hpbar">
-<div id="hpB"></div>
+<h2>玩家B HP: <span id="hpB">2000</span></h2>
+
+<div class="controls">
+
+<div>
+<h3>玩家A</h3>
+<button onclick="attack('A')">攻擊</button>
+<button onclick="defend('A')">防禦</button>
 </div>
 
-<div class="damage" id="damageB"></div>
-
+<div>
+<h3>玩家B</h3>
+<button onclick="attack('B')">攻擊</button>
+<button onclick="defend('B')">防禦</button>
 </div>
-
-<div class="phase">
-
-<div id="p_scissor">✌️</div>
-<div id="p_rock">👊</div>
-<div id="p_paper">✋</div>
-
-</div>
-
-<div class="player">
-
-<div class="hpbar">
-<div id="hpA"></div>
-</div>
-
-<div class="damage" id="damageA"></div>
-
-</div>
-
-<div id="pad">
-
-<div id="up">👊</div>
-<div id="left">✋</div>
-
-<div id="center">
-<img src="img/fist.png">
-</div>
-
-<div id="right">✌️</div>
-<div id="down">❌</div>
-
-</div>
-
-<button id="restart">重新開始</button>
 
 </div>
 
