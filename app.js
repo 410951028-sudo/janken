@@ -1,141 +1,106 @@
-
 let hpA = 2000
 let hpB = 2000
-
-let phase = "scissor"
 
 let moveA = null
 let moveB = null
 
-let roundActive = false
+let phaseList = ["✌️","✊","🖐️"]
+let phaseIndex = 0
 
-function updateHP(){
+function updateUI(){
+document.getElementById("hpA").innerText = hpA
+document.getElementById("hpB").innerText = hpB
+document.getElementById("phase").innerText = phaseList[phaseIndex]
+}
 
-document.getElementById("hpA").style.width = hpA/20+"%"
-document.getElementById("hpB").style.width = hpB/20+"%"
+function attack(player){
+
+if(player == "A") moveA = "attack"
+if(player == "B") moveB = "attack"
+
+checkResolve()
 
 }
 
-function setPhase(p){
+function defend(player){
 
-document.querySelectorAll(".phase div").forEach(e=>e.classList.remove("active"))
+if(player == "A") moveA = "defend"
+if(player == "B") moveB = "defend"
 
-if(p==="scissor")document.getElementById("p_scissor").classList.add("active")
-if(p==="rock")document.getElementById("p_rock").classList.add("active")
-if(p==="paper")document.getElementById("p_paper").classList.add("active")
-
-}
-
-function startRound(){
-
-roundActive = true
-
-phase="scissor"
-setPhase("scissor")
-
-setTimeout(()=>{
-phase="rock"
-setPhase("rock")
-},1000)
-
-setTimeout(()=>{
-phase="paper"
-setPhase("paper")
-},2000)
-
-setTimeout(()=>{
-resolveRound()
-},3000)
+checkResolve()
 
 }
 
-function resolveRound(){
+function checkResolve(){
 
-roundActive=false
-
-let winner = rps(moveA,moveB)
-
-if(winner==="A"){
-
-let dmg = calcDamage(moveA)
-
-hpB -= dmg
-showDamage("damageB",dmg)
+if(moveA && moveB){
+resolveBattle()
+}
 
 }
 
-if(winner==="B"){
+function resolveBattle(){
 
-let dmg = calcDamage(moveB)
+if(moveA == "attack" && moveB != "defend"){
+hpB -= 300
+vibrate()
+}
 
-hpA -= dmg
-showDamage("damageA",dmg)
+if(moveB == "attack" && moveA != "defend"){
+hpA -= 300
+vibrate()
+}
+
+moveA = null
+moveB = null
+
+nextPhase()
+
+updateUI()
+
+checkWin()
 
 }
 
-updateHP()
+function nextPhase(){
 
-moveA=null
-moveB=null
+phaseIndex++
+
+if(phaseIndex > 2){
+phaseIndex = 0
+}
 
 }
 
-function rps(a,b){
+function checkWin(){
 
-if(!a||!b)return null
+if(hpA <= 0){
+alert("玩家B勝利")
+resetGame()
+}
 
-if(a===b)return null
-
-if(a==="rock"&&b==="scissor")return "A"
-if(a==="scissor"&&b==="paper")return "A"
-if(a==="paper"&&b==="rock")return "A"
-
-return "B"
+if(hpB <= 0){
+alert("玩家A勝利")
+resetGame()
+}
 
 }
 
-function calcDamage(move){
+function resetGame(){
 
-let r = Math.random()
-
-if(move==="scissor"){
-
-return r<0.3?900:400
-
-}
-
-if(move==="rock")return 700
-
-if(move==="paper")return 900
+hpA = 2000
+hpB = 2000
+phaseIndex = 0
+updateUI()
 
 }
 
-function showDamage(id,d){
+function vibrate(){
 
-let el=document.getElementById(id)
-
-el.innerText="-"+d
-
-setTimeout(()=>el.innerText="",1000)
-
+if(navigator.vibrate){
 navigator.vibrate(100)
+}
 
 }
 
-updateHP()
-
-document.getElementById("center").addEventListener("touchstart",startRound)
-
-document.getElementById("up").onclick=()=>moveA="rock"
-document.getElementById("left").onclick=()=>moveA="paper"
-document.getElementById("right").onclick=()=>moveA="scissor"
-document.getElementById("down").onclick=()=>resolveRound()
-
-document.getElementById("restart").onclick=()=>{
-
-hpA=2000
-hpB=2000
-
-updateHP()
-
-}
+updateUI()
