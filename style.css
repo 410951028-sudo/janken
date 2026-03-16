@@ -1,93 +1,21 @@
 body{
-margin:0;
-background:#111;
-color:white;
 font-family:sans-serif;
 text-align:center;
 }
 
-#game{
-max-width:500px;
-margin:auto;
+#phase{
+font-size:60px;
+margin:40px;
 }
 
-.player{
-padding:10px;
-}
-
-.rotate{
-transform:rotate(180deg);
-}
-
-.hpbar{
-height:20px;
-background:#333;
-margin:10px;
-}
-
-.hpbar div{
-height:100%;
-background:red;
-width:100%;
-transition:0.3s;
-}
-
-.damage{
-font-size:24px;
-height:30px;
-}
-
-.phase{
+.controls{
 display:flex;
-justify-content:center;
-gap:30px;
-font-size:40px;
-margin:20px;
-}
-
-.phase div{
-opacity:0.2;
-}
-
-.active{
-opacity:1;
-}
-
-#pad{
-
-position:relative;
-width:200px;
-height:200px;
-margin:30px auto;
-
-}
-
-#pad div{
-
-position:absolute;
-font-size:40px;
-
-}
-
-#up{top:0;left:80px}
-#left{left:0;top:80px}
-#right{right:0;top:80px}
-#down{bottom:0;left:80px}
-
-#center{
-
-left:75px;
-top:75px;
-
-}
-
-#center img{
-width:50px;
+justify-content:space-around;
+margin-top:40px;
 }
 
 button{
-
 font-size:20px;
-padding:10px 30px;
-
+padding:10px 20px;
+margin:10px;
 }
