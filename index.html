@@ -3,67 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>猜拳戰鬥測試</title>
 
 <style>
-body{
-background:#111;
-color:#fff;
-font-family:sans-serif;
-text-align:center;
-}
-
-#pad{
-width:200px;
-height:200px;
-background:#222;
-border-radius:50%;
-margin:40px auto;
-position:relative;
-touch-action:none;
-}
-
-#stick{
-width:80px;
-height:80px;
-background:#555;
-border-radius:50%;
-position:absolute;
-left:60px;
-top:60px;
-}
-
-#phase{
-font-size:24px;
-margin:10px;
-}
-
-#history{
-margin-top:20px;
-font-size:14px;
-text-align:left;
-padding:10px;
-height:200px;
-overflow:auto;
-border-top:1px solid #333;
-}
-
-#hp{
-margin-top:10px;
-}
+body{background:#111;color:#fff;text-align:center}
+#pad{width:200px;height:200px;background:#222;border-radius:50%;margin:40px auto;position:relative}
+#stick{width:80px;height:80px;background:#555;border-radius:50%;position:absolute;left:60px;top:60px}
+#history{margin-top:20px;text-align:left;height:200px;overflow:auto}
 </style>
-
 </head>
+
 <body>
 
-<h2>猜拳戰鬥</h2>
+<h3 id="phase">等待</h3>
+<div id="hp"></div>
 
-<div id="phase">等待開始</div>
-<div id="hp">HP A:2000 / HP B:2000</div>
-
-<div id="pad">
-<div id="stick"></div>
-</div>
+<div id="pad"><div id="stick"></div></div>
 
 <div id="history"></div>
 
@@ -71,232 +25,168 @@ margin-top:10px;
 
 /* ===== 狀態 ===== */
 
-let hpA = 2000
-let hpB = 2000
+let hpA=2000,hpB=2000
+let phase="IDLE"
+let holding=false
+let interval=null
 
-let phase = "IDLE"
-let holding = false
-let interval = null
+let roundCount=0
+let roundSummary=[]
 
-let roundLog = []
-
-const DAMAGE = 200
+const DAMAGE=200
+const phaseDuration=1500
 
 /* ===== 工具 ===== */
 
 function enemyMove(){
-const arr = ["石頭","布","剪刀"]
-return arr[Math.floor(Math.random()*3)]
+return ["石頭","布","剪刀"][Math.floor(Math.random()*3)]
 }
 
 function judge(a,b){
 if(a===b) return 0
-if(
-(a==="石頭"&&b==="剪刀")||
-(a==="剪刀"&&b==="布")||
-(a==="布"&&b==="石頭")
-) return 1
+if((a==="石頭"&&b==="剪刀")||(a==="剪刀"&&b==="布")||(a==="布"&&b==="石頭")) return 1
 return -1
 }
 
 /* ===== UI ===== */
 
 function updateUI(){
-document.getElementById("hp").innerText =
-`HP A:${hpA} / HP B:${hpB}`
+document.getElementById("hp").innerText=`HP A:${hpA} / HP B:${hpB}`
+document.getElementById("phase").innerText=phase
 }
 
-function updatePhase(){
-document.getElementById("phase").innerText = phase
+function renderHistory(text){
+document.getElementById("history").innerHTML=text
 }
 
-function updateLog(){
-let html = roundLog.map(r=>{
-return `${r.phase}｜你:${r.player} vs 敵:${r.enemy} → ${r.result}`
-}).join("<br>")
-document.getElementById("history").innerHTML = html
-}
-
-/* ===== 回合控制 ===== */
+/* ===== 回合 ===== */
 
 function startRound(){
 
-phase = "SCISSORS"
-roundLog = []
-updatePhase()
-updateLog()
+roundCount++
+phase="SCISSORS"
+roundSummary=[]
 
-let triggered = false
+updateUI()
 
-interval = setInterval(()=>{
+interval=setInterval(nextPhase,phaseDuration)
 
-triggered = false
-
-/* 推進階段 */
-if(phase === "SCISSORS"){
-phase = "ROCK"
 }
-else if(phase === "ROCK"){
-phase = "PAPER"
-}
+
+function nextPhase(){
+
+if(phase==="SCISSORS") phase="ROCK"
+else if(phase==="ROCK") phase="PAPER"
 else{
-endRound("時間結束")
+endRound()
 return
 }
 
-updatePhase()
-
-/* 若沒出招 */
-if((phase==="ROCK"||phase==="PAPER") && !triggered){
-
-let enemy = enemyMove()
-
-roundLog.push({
-phase:phase,
-player:"未出招",
-enemy:enemy,
-result:"錯過"
-})
-
-updateLog()
-}
-
-},1000)
-
-}
-
-/* ===== 結束 ===== */
-
-function endRound(reason){
-
-clearInterval(interval)
-interval = null
-holding = false
-
-roundLog.push({
-phase:"END",
-player:"-",
-enemy:"-",
-result:reason
-})
-
-updateLog()
+updateUI()
 
 }
 
 /* ===== 出招 ===== */
 
+let acted=false
+
 function handleMove(move){
 
 if(!holding) return
+if(phase==="SCISSORS") return
 
-let enemy = enemyMove()
+if(acted) return
+acted=true
 
-let record = {
-phase:phase,
-player:move,
-enemy:enemy,
-result:null
-}
+let enemy=enemyMove()
+let result=judge(move,enemy)
 
-/* 剪刀階段禁止 */
-if(phase==="SCISSORS"){
-record.result = "無效"
-roundLog.push(record)
-updateLog()
-return
-}
-
-let result = judge(move,enemy)
+let text=`${phase} ${move} vs ${enemy} → `
 
 if(result===1){
-hpB -= DAMAGE
-record.result = "勝"
+hpB-=DAMAGE
+text+=`玩家勝（-${DAMAGE}HP）`
 }
 else if(result===-1){
-hpA -= DAMAGE
-record.result = "敗"
+hpA-=DAMAGE
+text+=`玩家敗（-${DAMAGE}HP）`
 }
 else{
-record.result = "平手"
+text+=`平手`
 }
 
-roundLog.push(record)
+roundSummary.push(text)
 
 updateUI()
-updateLog()
 
-/* ROCK 直接結束 */
-if(phase==="ROCK"){
-if(move==="石頭" || enemy==="石頭"){
-endRound("石頭觸發結束")
+/* ROCK 結束 */
+if(phase==="ROCK"&&(move==="石頭"||enemy==="石頭")){
+endRound()
 return
-}
 }
 
 /* PAPER 結束 */
 if(phase==="PAPER"){
-endRound("布階段結束")
+endRound()
 return
 }
+
+}
+
+/* ===== 結束 ===== */
+
+function endRound(){
+
+clearInterval(interval)
+interval=null
+holding=false
+
+let finalText=`第${roundCount}回合：<br>`+
+roundSummary.join("<br> → ")
+
+renderHistory(finalText)
+
+acted=false
 
 }
 
 /* ===== 操作盤 ===== */
 
-const pad = document.getElementById("pad")
-const stick = document.getElementById("stick")
+const pad=document.getElementById("pad")
 
-let startX = 0
-let startY = 0
+let startX=0,startY=0
 
 pad.addEventListener("touchstart",e=>{
-
-holding = true
-
-startX = e.touches[0].clientX
-startY = e.touches[0].clientY
-
+holding=true
+acted=false
+startX=e.touches[0].clientX
+startY=e.touches[0].clientY
 startRound()
-
 })
 
 pad.addEventListener("touchmove",e=>{
 
 if(!holding) return
 
-let x = e.touches[0].clientX - startX
-let y = e.touches[0].clientY - startY
+let x=e.touches[0].clientX-startX
+let y=e.touches[0].clientY-startY
 
-let dist = Math.sqrt(x*x + y*y)
+let dist=Math.sqrt(x*x+y*y)
+if(dist<30) return
 
-if(dist < 30) return
-
-if(Math.abs(x) > Math.abs(y)){
-
-if(x > 0){
-handleMove("布")
+if(Math.abs(x)>Math.abs(y)){
+handleMove(x>0?"布":"剪刀")
 }else{
-handleMove("剪刀")
-}
-
-}else{
-
-if(y < 0){
-handleMove("石頭")
-}else{
-handleMove("不要")
-}
-
+handleMove(y<0?"石頭":"不要")
 }
 
 })
 
 pad.addEventListener("touchend",()=>{
-
-holding = false
-
+holding=false
 })
+
+updateUI()
 
 </script>
 
