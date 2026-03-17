@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<title>猜拳戰鬥核心測試</title>
+<title>猜拳戰鬥（節奏測試版）</title>
 
 <style>
 body{
@@ -43,6 +43,7 @@ left:80px;
 top:80px;
 background:#666;
 border-radius:50%;
+transition:0.05s;
 }
 
 #log{
@@ -58,44 +59,47 @@ min-height:40px;
 <div class="hp">玩家HP: <span id="hpA">2000</span></div>
 <div class="hp">敵人HP: <span id="hpB">2000</span></div>
 
-<div id="phase">SCISSORS</div>
+<div id="phase">等待開始</div>
 
 <div id="pad">
 <div id="center"></div>
 </div>
 
-<div id="log">開始</div>
+<div id="log">按住開始</div>
 
 <script>
 
+/* ===== 基本 ===== */
+
 let hpA = 2000
 let hpB = 2000
-
 const DAMAGE = 200
 
 let phases = ["SCISSORS","ROCK","PAPER"]
 let phaseIndex = 0
-let phase = phases[phaseIndex]
+let phase = phases[0]
 
-let playerMove = null
+let holding = false
+let timer = null
 
 const phaseText = {
-SCISSORS:"✌️ 剪刀（不可出招）",
-ROCK:"✊ 石頭",
-PAPER:"✋ 布"
+SCISSORS:"✌️ 剪刀（觀察）",
+ROCK:"✊ 石頭（可出招）",
+PAPER:"✋ 布（可出招）"
 }
 
 function updateUI(){
 document.getElementById("hpA").innerText = hpA
 document.getElementById("hpB").innerText = hpB
-document.getElementById("phase").innerText = phaseText[phase]
+document.getElementById("phase").innerText = phaseText[phase] || "等待開始"
 }
 
 function log(text){
 document.getElementById("log").innerText = text
 }
 
-/* 判定 */
+/* ===== 判定 ===== */
+
 function judge(a,b){
 if(a===b) return 0
 
@@ -108,45 +112,64 @@ if(
 return -1
 }
 
-/* 電腦出拳 */
 function enemyMove(){
 let arr = ["石頭","布","剪刀"]
 return arr[Math.floor(Math.random()*3)]
 }
 
-/* 進入下一階段 */
-function nextPhase(){
+/* ===== 回合控制 ===== */
+
+function startPhaseFlow(){
+
+timer = setInterval(()=>{
+
+if(!holding) return
+
+/* 顯示剪刀 */
+if(phase === "SCISSORS"){
+log("觀察中...")
+}
+
+/* 推進 */
 phaseIndex++
 
 if(phaseIndex >= phases.length){
-endRound("進入布階段結束")
+endRound("時間結束")
 return
 }
 
 phase = phases[phaseIndex]
 updateUI()
+
+},1000)
+
 }
 
-/* 結束回合 */
 function endRound(msg){
+
+clearInterval(timer)
+holding = false
+
 log(msg + "（回合結束）")
 
 phaseIndex = 0
 phase = phases[0]
-playerMove = null
 
 setTimeout(()=>{
 updateUI()
-log("新回合開始")
-},1000)
+log("按住開始")
+},800)
+
 }
 
-/* 處理出招 */
+/* ===== 出招 ===== */
+
 function handleMove(move){
 
-/* 剪刀階段不能出招 */
+if(!holding) return
+
 if(phase === "SCISSORS"){
-log("剪刀階段不能出招")
+log("剪刀階段不可出招")
 return
 }
 
@@ -166,7 +189,7 @@ updateUI()
 
 log(`你:${move} vs 敵:${enemy}`)
 
-/* ===== ROCK 特判 ===== */
+/* ROCK 特判 */
 if(phase === "ROCK"){
 if(move === "石頭" || enemy === "石頭"){
 endRound("石頭觸發結束")
@@ -174,14 +197,11 @@ return
 }
 }
 
-/* ===== PAPER 結束 ===== */
+/* PAPER 結束 */
 if(phase === "PAPER"){
 endRound("布階段結束")
 return
 }
-
-/* 進下一階段 */
-nextPhase()
 
 }
 
@@ -194,10 +214,24 @@ let startX, startY
 let triggered = false
 
 pad.addEventListener("touchstart",e=>{
+
+if(holding) return
+
+holding = true
+
+phaseIndex = 0
+phase = phases[0]
+
+updateUI()
+log("回合開始")
+
+startPhaseFlow()
+
 let t = e.touches[0]
 startX = t.clientX
 startY = t.clientY
 triggered = false
+
 })
 
 pad.addEventListener("touchmove",e=>{
@@ -214,7 +248,7 @@ let mx = Math.max(-40, Math.min(40, dx))
 let my = Math.max(-40, Math.min(40, dy))
 center.style.transform = `translate(${mx}px,${my}px)`
 
-/* 判定 */
+/* 出招 */
 if(dist > 70 && !triggered){
 
 triggered = true
@@ -234,7 +268,14 @@ handleMove(move)
 })
 
 pad.addEventListener("touchend",()=>{
+
+holding = false
+clearInterval(timer)
+
 center.style.transform = "translate(0,0)"
+
+log("中斷")
+
 })
 
 updateUI()
