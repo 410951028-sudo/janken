@@ -2,195 +2,235 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+<title>節奏版猜拳</title>
 <style>
-body{background:#111;color:#fff;text-align:center}
-#pad{width:200px;height:200px;background:#222;border-radius:50%;margin:40px auto;position:relative}
-#stick{width:80px;height:80px;background:#555;border-radius:50%;position:absolute;left:60px;top:60px}
-#history{margin-top:20px;text-align:left;height:200px;overflow:auto}
+body { text-align:center; font-family:sans-serif; }
+#stick {
+  width:100px; height:100px;
+  background:#ccc; border-radius:50%;
+  margin:20px auto;
+  line-height:100px;
+}
+#log { max-width:500px; margin:auto; text-align:left; }
 </style>
 </head>
-
 <body>
 
-<h3 id="phase">等待</h3>
-<div id="hp"></div>
-
-<div id="pad"><div id="stick"></div></div>
-
-<div id="history"></div>
+<h2 id="phase">等待開始</h2>
+<div id="stick">按住</div>
+<h3 id="hp"></h3>
+<div id="log"></div>
 
 <script>
+let hpA = 2000
+let hpB = 2000
 
-/* ===== 狀態 ===== */
+let phase = "IDLE"
+let holding = false
+let holdTimer = null
 
-let hpA=2000,hpB=2000
-let phase="IDLE"
-let holding=false
-let timer=null
+let currentInput = null
+let roundCount = 0
+let roundSummary = []
 
-let roundCount=0
-let roundSummary=[]
+const stick = document.getElementById("stick")
 
-let currentInput=null  // ⭐ 最後輸入
+/* ================= */
+/* 🎮 按住判定 */
+/* ================= */
 
-const DAMAGE=200
+stick.addEventListener("mousedown", startHold)
+stick.addEventListener("mouseup", cancelHold)
+stick.addEventListener("mouseleave", cancelHold)
 
-/* ===== 工具 ===== */
+function startHold(){
+holding = true
 
-function enemyMove(){
-return ["石頭","布","剪刀"][Math.floor(Math.random()*3)]
+holdTimer = setTimeout(()=>{
+if(holding){
+startRound()
+}
+},1000)
 }
 
-function judge(a,b){
-if(a===b) return 0
-if((a==="石頭"&&b==="剪刀")||(a==="剪刀"&&b==="布")||(a==="布"&&b==="石頭")) return 1
-return -1
+function cancelHold(){
+holding = false
+clearTimeout(holdTimer)
 }
 
-/* ===== UI ===== */
-
-function updateUI(){
-document.getElementById("hp").innerText=`HP A:${hpA} / HP B:${hpB}`
-document.getElementById("phase").innerText=phase
-}
-
-function renderHistory(text){
-document.getElementById("history").innerHTML=text
-}
-
-/* ===== 回合流程 ===== */
+/* ================= */
+/* 🎮 回合流程 */
+/* ================= */
 
 function startRound(){
 
 roundCount++
-roundSummary=[]
-currentInput=null
+roundSummary = []
+currentInput = null
 
-phase="SCISSORS"
-updateUI()
+phase="START"
+updateUI("回合開始")
 
-/* 0s → SCISSORS */
+/* 1.1 SCISSORS */
 setTimeout(()=>{
-phase="ROCK"
-currentInput=null
-updateUI()
+if(!holding) return
+phase="SCISSORS"
+updateUI("✌️")
+},100)
+
+/* 2.0 強提示 */
+setTimeout(()=>{
+if(!holding) return
+updateUI("✌️")
 },1000)
 
-/* 2s → 判定 ROCK */
+/* 2.1 ROCK開始 */
 setTimeout(()=>{
-resolvePhase("ROCK")
+if(!holding) return
+phase="ROCK"
+currentInput=null
+updateUI("🪨")
+},1100)
 
-/* 若已結束就不進 PAPER */
+/* 3.0 ROCK判定 */
+setTimeout(()=>{
 if(!holding) return
 
-phase="PAPER"
-currentInput=null
-updateUI()
+updateUI("🪨")
+resolvePhase("ROCK")
+
+if(!holding) return
 
 },2000)
 
-/* 3s → 判定 PAPER */
+/* 3.1 PAPER開始 */
 setTimeout(()=>{
 if(!holding) return
+phase="PAPER"
+currentInput=null
+updateUI("📄")
+},2100)
+
+/* 4.0 PAPER判定 */
+setTimeout(()=>{
+if(!holding) return
+
+updateUI("📄")
 resolvePhase("PAPER")
 endRound()
+
 },3000)
 
 }
 
-/* ===== 判定 ===== */
+/* ================= */
+/* 🎮 玩家輸入 */
+/* ================= */
+
+document.addEventListener("keydown",(e)=>{
+if(phase==="ROCK" || phase==="PAPER"){
+
+if(e.key==="1") currentInput="scissors"
+if(e.key==="2") currentInput="rock"
+if(e.key==="3") currentInput="paper"
+
+}
+})
+
+/* ================= */
+/* 🎮 判定 */
+/* ================= */
 
 function resolvePhase(p){
 
-let player = currentInput || "未出招"
-let enemy = enemyMove()
+let player = currentInput || "none"
+let enemy = randomMove()
 
-let text=`${p} ${player} vs ${enemy} → `
+let result = judge(player, enemy)
 
-if(player==="未出招"){
-text+="錯過"
+let text = `${phaseName(p)} ${toText(player)} VS ${toText(enemy)} → ${result}`
 roundSummary.push(text)
+
+/* 石頭階段直接結束 */
+if(p==="ROCK" && (player==="rock" || enemy==="rock")){
+applyDamage(result)
+endRound()
 return
 }
 
-let result=judge(player,enemy)
-
-if(result===1){
-hpB-=DAMAGE
-text+=`玩家勝（-${DAMAGE}HP）`
-}
-else if(result===-1){
-hpA-=DAMAGE
-text+=`玩家敗（-${DAMAGE}HP）`
-}
-else{
-text+=`平手`
-}
-
-roundSummary.push(text)
-updateUI()
-
-/* ROCK 結束條件 */
-if(p==="ROCK" && (player==="石頭"||enemy==="石頭")){
-endRound()
-}
+applyDamage(result)
 
 }
 
-/* ===== 結束 ===== */
+/* ================= */
+/* 🎮 結束 */
+/* ================= */
 
 function endRound(){
 
-holding=false
+holding = false
 
-let finalText=`第${roundCount}回合：<br>`+
-roundSummary.join("<br> → ")
+let summaryText = `第${roundCount}回合：\n` + roundSummary.join(" >> ")
 
-renderHistory(finalText)
+let el = document.createElement("div")
+el.innerText = summaryText
+
+document.getElementById("log").prepend(el)
+
+phase="IDLE"
+updateUI("等待開始")
 
 }
 
-/* ===== 操作盤 ===== */
+/* ================= */
+/* 🎮 工具 */
+/* ================= */
 
-const pad=document.getElementById("pad")
-
-let startX=0,startY=0
-
-pad.addEventListener("touchstart",e=>{
-holding=true
-startX=e.touches[0].clientX
-startY=e.touches[0].clientY
-startRound()
-})
-
-pad.addEventListener("touchmove",e=>{
-
-if(!holding) return
-if(phase==="SCISSORS") return
-
-let x=e.touches[0].clientX-startX
-let y=e.touches[0].clientY-startY
-
-let dist=Math.sqrt(x*x+y*y)
-if(dist<30) return
-
-if(Math.abs(x)>Math.abs(y)){
-currentInput = x>0?"布":"剪刀"
-}else{
-currentInput = y<0?"石頭":"不要"
+function randomMove(){
+let arr=["scissors","rock","paper"]
+return arr[Math.floor(Math.random()*3)]
 }
 
-})
+function judge(a,b){
 
-pad.addEventListener("touchend",()=>{
-holding=false
-})
+if(a==="none") return "未出招"
 
-updateUI()
+if(a===b) return "平手"
+
+if(
+(a==="scissors"&&b==="paper")||
+(a==="rock"&&b==="scissors")||
+(a==="paper"&&b==="rock")
+) return "玩家勝利"
+
+return "電腦勝利"
+}
+
+function applyDamage(result){
+
+if(result==="玩家勝利") hpB-=200
+if(result==="電腦勝利") hpA-=200
+
+}
+
+function toText(m){
+if(m==="scissors") return "剪刀"
+if(m==="rock") return "石頭"
+if(m==="paper") return "布"
+return "無"
+}
+
+function phaseName(p){
+if(p==="ROCK") return "石頭"
+if(p==="PAPER") return "布"
+return ""
+}
+
+function updateUI(text){
+document.getElementById("phase").innerText = text
+document.getElementById("hp").innerText=`HP A:${hpA} / HP B:${hpB}`
+}
 
 </script>
-
 </body>
 </html>
