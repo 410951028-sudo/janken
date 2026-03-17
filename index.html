@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<title>猜拳戰鬥測試</title>
+<title>猜拳戰鬥核心測試</title>
 
 <style>
 body{
@@ -15,13 +15,14 @@ text-align:center;
 font-family:sans-serif;
 }
 
-#game{
-margin-top:20px;
+.hp{
+margin:10px;
+font-size:18px;
 }
 
-.hp{
-font-size:20px;
-margin:5px;
+#phase{
+font-size:24px;
+margin:10px;
 }
 
 #pad{
@@ -42,166 +43,181 @@ left:80px;
 top:80px;
 background:#666;
 border-radius:50%;
-transition:0.05s;
 }
 
 #log{
 margin-top:10px;
-font-size:18px;
+font-size:16px;
+min-height:40px;
 }
-
 </style>
 </head>
 
 <body>
 
-<div id="game">
 <div class="hp">玩家HP: <span id="hpA">2000</span></div>
 <div class="hp">敵人HP: <span id="hpB">2000</span></div>
-</div>
+
+<div id="phase">SCISSORS</div>
 
 <div id="pad">
 <div id="center"></div>
 </div>
 
-<div id="log">開始戰鬥</div>
+<div id="log">開始</div>
 
 <script>
 
 let hpA = 2000
 let hpB = 2000
 
-const pad = document.getElementById("pad")
-const centerEl = document.getElementById("center")
+const DAMAGE = 200
 
-let startX, startY
-let charging = false
-let triggered = false
-let chargeStart = 0
-let loop = null
+let phases = ["SCISSORS","ROCK","PAPER"]
+let phaseIndex = 0
+let phase = phases[phaseIndex]
 
-function vibrate(p){
-if(navigator.vibrate) navigator.vibrate(p)
+let playerMove = null
+
+const phaseText = {
+SCISSORS:"✌️ 剪刀（不可出招）",
+ROCK:"✊ 石頭",
+PAPER:"✋ 布"
 }
 
-function log(t){
-document.getElementById("log").innerText=t
-}
-
-function updateHP(){
+function updateUI(){
 document.getElementById("hpA").innerText = hpA
 document.getElementById("hpB").innerText = hpB
+document.getElementById("phase").innerText = phaseText[phase]
 }
 
-/* 猜拳判定 */
-function resolve(player){
+function log(text){
+document.getElementById("log").innerText = text
+}
 
-const choices = ["石頭","布","剪刀","不出"]
-let enemy = choices[Math.floor(Math.random()*3)]
+/* 判定 */
+function judge(a,b){
+if(a===b) return 0
 
-if(player === "不出"){
-log("你防禦，敵人出："+enemy)
+if(
+(a==="石頭"&&b==="剪刀")||
+(a==="布"&&b==="石頭")||
+(a==="剪刀"&&b==="布")
+) return 1
+
+return -1
+}
+
+/* 電腦出拳 */
+function enemyMove(){
+let arr = ["石頭","布","剪刀"]
+return arr[Math.floor(Math.random()*3)]
+}
+
+/* 進入下一階段 */
+function nextPhase(){
+phaseIndex++
+
+if(phaseIndex >= phases.length){
+endRound("進入布階段結束")
 return
 }
 
-if(player === "空"){
-log("你略過")
+phase = phases[phaseIndex]
+updateUI()
+}
+
+/* 結束回合 */
+function endRound(msg){
+log(msg + "（回合結束）")
+
+phaseIndex = 0
+phase = phases[0]
+playerMove = null
+
+setTimeout(()=>{
+updateUI()
+log("新回合開始")
+},1000)
+}
+
+/* 處理出招 */
+function handleMove(move){
+
+/* 剪刀階段不能出招 */
+if(phase === "SCISSORS"){
+log("剪刀階段不能出招")
 return
 }
 
-let result = ""
+let enemy = enemyMove()
 
-if(player === enemy){
-result = "平手"
+let result = judge(move, enemy)
+
+/* 傷害 */
+if(result === 1){
+hpB -= DAMAGE
 }
-else if(
-(player==="石頭" && enemy==="剪刀")||
-(player==="布" && enemy==="石頭")||
-(player==="剪刀" && enemy==="布")
-){
-result = "你贏"
-hpB -= 200
-}else{
-result = "你輸"
-hpA -= 200
+else if(result === -1){
+hpA -= DAMAGE
 }
 
-updateHP()
+updateUI()
 
-log(`你:${player} vs 敵:${enemy} → ${result}`)
+log(`你:${move} vs 敵:${enemy}`)
+
+/* ===== ROCK 特判 ===== */
+if(phase === "ROCK"){
+if(move === "石頭" || enemy === "石頭"){
+endRound("石頭觸發結束")
+return
+}
+}
+
+/* ===== PAPER 結束 ===== */
+if(phase === "PAPER"){
+endRound("布階段結束")
+return
+}
+
+/* 進下一階段 */
+nextPhase()
 
 }
 
-/* 蓄力 */
-function startChargeLoop(){
-loop = setInterval(()=>{
+/* ===== 操作盤 ===== */
 
-if(!charging) return
+const pad = document.getElementById("pad")
+const center = document.getElementById("center")
 
-let progress = (Date.now()-chargeStart)/1000
+let startX, startY
+let triggered = false
 
-if(progress >= 1){
-charging = false
-vibrate([100,30,100])
-resolve("不出")
-}
-
-},16)
-}
-
-function stopChargeLoop(){
-clearInterval(loop)
-}
-
-/* start */
 pad.addEventListener("touchstart",e=>{
-
-const t = e.touches[0]
-
+let t = e.touches[0]
 startX = t.clientX
 startY = t.clientY
-
-charging = true
 triggered = false
-chargeStart = Date.now()
-
-startChargeLoop()
-
-vibrate(10)
-
 })
 
-/* move */
 pad.addEventListener("touchmove",e=>{
 
-const t = e.touches[0]
+let t = e.touches[0]
 
 let dx = t.clientX - startX
 let dy = t.clientY - startY
 
 let dist = Math.sqrt(dx*dx + dy*dy)
 
-/* 浮動 */
-let follow = 45
-let mx = Math.max(-follow, Math.min(follow, dx))
-let my = Math.max(-follow, Math.min(follow, dy))
+/* 跟手 */
+let mx = Math.max(-40, Math.min(40, dx))
+let my = Math.max(-40, Math.min(40, dy))
+center.style.transform = `translate(${mx}px,${my}px)`
 
-centerEl.style.transform =
-`translate(${mx}px,${my}px)`
-
-/* 取消蓄力 */
-if(dist > 20 && charging){
-charging = false
-stopChargeLoop()
-}
-
-/* 撥動 */
-let threshold = 75
-
-if(dist > threshold && !triggered){
+/* 判定 */
+if(dist > 70 && !triggered){
 
 triggered = true
-stopChargeLoop()
 
 let angle = Math.atan2(dy,dx)*180/Math.PI
 
@@ -212,22 +228,16 @@ else if(angle>45&&angle<135) move="空"
 else if(angle>=135||angle<=-135) move="剪刀"
 else move="石頭"
 
-vibrate([50,30,50])
-
-resolve(move)
+handleMove(move)
 }
 
 })
 
-/* end */
 pad.addEventListener("touchend",()=>{
-
-charging = false
-stopChargeLoop()
-
-centerEl.style.transform="translate(0,0)"
-
+center.style.transform = "translate(0,0)"
 })
+
+updateUI()
 
 </script>
 
