@@ -33,6 +33,8 @@ let interval=null
 let roundCount=0
 let roundSummary=[]
 
+let phaseActed=false   // ⭐ 每階段鎖
+
 const DAMAGE=200
 const phaseDuration=1500
 
@@ -75,6 +77,8 @@ interval=setInterval(nextPhase,phaseDuration)
 
 function nextPhase(){
 
+phaseActed=false   // ⭐ 每進新階段重置
+
 if(phase==="SCISSORS") phase="ROCK"
 else if(phase==="ROCK") phase="PAPER"
 else{
@@ -88,15 +92,13 @@ updateUI()
 
 /* ===== 出招 ===== */
 
-let acted=false
-
 function handleMove(move){
 
 if(!holding) return
 if(phase==="SCISSORS") return
 
-if(acted) return
-acted=true
+if(phaseActed) return   // ⭐ 防止同階段多次觸發
+phaseActed=true
 
 let enemy=enemyMove()
 let result=judge(move,enemy)
@@ -146,8 +148,6 @@ roundSummary.join("<br> → ")
 
 renderHistory(finalText)
 
-acted=false
-
 }
 
 /* ===== 操作盤 ===== */
@@ -158,7 +158,6 @@ let startX=0,startY=0
 
 pad.addEventListener("touchstart",e=>{
 holding=true
-acted=false
 startX=e.touches[0].clientX
 startY=e.touches[0].clientY
 startRound()
