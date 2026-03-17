@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>進階操作盤</title>
+<title>操作盤最終版</title>
 
 <style>
 body{
@@ -14,12 +14,11 @@ justify-content:center;
 align-items:center;
 background:#111;
 color:white;
-font-family:sans-serif;
 }
 
 #pad{
-width:240px;
-height:240px;
+width:260px;
+height:260px;
 border-radius:50%;
 background:#222;
 position:relative;
@@ -36,40 +35,22 @@ display:flex;
 align-items:center;
 justify-content:center;
 font-size:24px;
-transition:0.1s;
 }
 
-#up{top:10px;left:85px}
-#down{bottom:10px;left:85px}
-#left{left:10px;top:85px}
-#right{right:10px;top:85px}
+#up{top:10px;left:95px}
+#down{bottom:10px;left:95px}
+#left{left:10px;top:95px}
+#right{right:10px;top:95px}
 
 #center{
 position:absolute;
-width:90px;
-height:90px;
-left:75px;
-top:75px;
+width:100px;
+height:100px;
+left:80px;
+top:80px;
 background:#666;
 border-radius:50%;
-display:flex;
-align-items:center;
-justify-content:center;
 transition:0.05s;
-}
-
-#chargeCanvas{
-position:absolute;
-left:0;
-top:0;
-width:100%;
-height:100%;
-pointer-events:none;
-}
-
-.active{
-background:#0af;
-transform:scale(1.15);
 }
 
 #log{
@@ -84,12 +65,12 @@ font-size:22px;
 
 <div id="pad">
 
-<canvas id="chargeCanvas"></canvas>
-
 <div id="up" class="dir">↑</div>
 <div id="down" class="dir">↓</div>
 <div id="left" class="dir">←</div>
 <div id="right" class="dir">→</div>
+
+<canvas id="ring"></canvas>
 
 <div id="center"></div>
 
@@ -101,7 +82,7 @@ font-size:22px;
 
 const pad = document.getElementById("pad")
 const centerEl = document.getElementById("center")
-const canvas = document.getElementById("chargeCanvas")
+const canvas = document.getElementById("ring")
 const ctx = canvas.getContext("2d")
 
 canvas.width = pad.offsetWidth
@@ -115,8 +96,8 @@ right:document.getElementById("right")
 }
 
 let startX, startY
-let triggered = false
 let charging = false
+let triggered = false
 let chargeStart = 0
 
 function vibrate(p){
@@ -129,22 +110,25 @@ dirs[d].classList.remove("active")
 }
 }
 
-function drawCharge(progress){
+/* 畫貼著蘑菇頭的圈 */
+function drawRing(progress){
 
 ctx.clearRect(0,0,canvas.width,canvas.height)
 
+let cx = canvas.width/2
+let cy = canvas.height/2
+
 ctx.beginPath()
-ctx.arc(canvas.width/2,canvas.height/2,60,-Math.PI/2,
+ctx.arc(cx, cy, 60, -Math.PI/2,
 (-Math.PI/2)+(Math.PI*2*progress))
 
-ctx.strokeStyle = "#0af"
-ctx.lineWidth = 6
+ctx.strokeStyle="#0af"
+ctx.lineWidth=6
 ctx.stroke()
 
 }
 
-/* touchstart */
-
+/* start */
 pad.addEventListener("touchstart",e=>{
 
 const t = e.touches[0]
@@ -152,16 +136,15 @@ const t = e.touches[0]
 startX = t.clientX
 startY = t.clientY
 
-triggered = false
 charging = true
+triggered = false
 chargeStart = Date.now()
 
 vibrate(10)
 
 })
 
-/* touchmove */
-
+/* move */
 pad.addEventListener("touchmove",e=>{
 
 const t = e.touches[0]
@@ -171,16 +154,16 @@ let dy = t.clientY - startY
 
 let dist = Math.sqrt(dx*dx + dy*dy)
 
-/* 蘑菇頭浮動（更大範圍） */
-let follow = 35
-let moveX = Math.max(-follow, Math.min(follow, dx))
-let moveY = Math.max(-follow, Math.min(follow, dy))
+/* 浮動（更大） */
+let follow = 45
+let mx = Math.max(-follow, Math.min(follow, dx))
+let my = Math.max(-follow, Math.min(follow, dy))
 
 centerEl.style.transform =
-`translate(${moveX}px, ${moveY}px)`
+`translate(${mx}px,${my}px)`
 
-/* 撥動門檻（更大） */
-let threshold = 60
+/* 撥動 */
+let threshold = 75
 
 if(dist > threshold && !triggered){
 
@@ -188,68 +171,66 @@ triggered = true
 charging = false
 ctx.clearRect(0,0,canvas.width,canvas.height)
 
-/* 方向判定 */
-let angle = Math.atan2(dy,dx) * 180 / Math.PI
+/* 方向 */
+let angle = Math.atan2(dy,dx)*180/Math.PI
 
 let dir
 
-if(angle >= -45 && angle <= 45){
-dir="right"
-}
-else if(angle > 45 && angle < 135){
-dir="down"
-}
-else if(angle >= 135 || angle <= -135){
-dir="left"
-}
-else{
-dir="up"
-}
+if(angle>=-45&&angle<=45) dir="right"
+else if(angle>45&&angle<135) dir="down"
+else if(angle>=135||angle<=-135) dir="left"
+else dir="up"
 
-/* 強震動 */
-vibrate([40,20,40])
+vibrate([50,30,50])
 
 clearActive()
 dirs[dir].classList.add("active")
 
-document.getElementById("log").innerText =
-"撥動: " + dir
-
+log("撥動："+dir)
 }
 
-/* 蓄力畫圈 */
-if(charging){
+/* 蓄力（完全不動才成立） */
+if(charging && !triggered){
 
-let progress = (Date.now() - chargeStart)/1000
+if(dist < 15){
 
-if(progress >= 1){
+let progress=(Date.now()-chargeStart)/1000
 
-charging = false
-drawCharge(1)
+if(progress>=1){
 
-/* 蓄力完成震動 */
-vibrate([100,30,100])
+charging=false
+drawRing(1)
 
-document.getElementById("log").innerText =
-"蓄力完成"
+vibrate([120,40,120])
+
+log("蓄力完成")
 
 }else{
-drawCharge(progress)
+drawRing(progress)
+}
+
+}else{
+/* 一動就取消蓄力 */
+charging=false
+ctx.clearRect(0,0,canvas.width,canvas.height)
 }
 
 }
 
 })
 
-/* touchend */
-
+/* end */
 pad.addEventListener("touchend",()=>{
 
-centerEl.style.transform = "translate(0,0)"
+centerEl.style.transform="translate(0,0)"
 ctx.clearRect(0,0,canvas.width,canvas.height)
 clearActive()
 
 })
+
+function log(t){
+document.getElementById("log").innerText=t
+}
 
 </script>
 
