@@ -28,15 +28,14 @@ body{background:#111;color:#fff;text-align:center}
 let hpA=2000,hpB=2000
 let phase="IDLE"
 let holding=false
-let interval=null
+let timer=null
 
 let roundCount=0
 let roundSummary=[]
 
-let phaseActed=false   // ⭐ 每階段鎖
+let currentInput=null  // ⭐ 最後輸入
 
 const DAMAGE=200
-const phaseDuration=1500
 
 /* ===== 工具 ===== */
 
@@ -61,49 +60,62 @@ function renderHistory(text){
 document.getElementById("history").innerHTML=text
 }
 
-/* ===== 回合 ===== */
+/* ===== 回合流程 ===== */
 
 function startRound(){
 
 roundCount++
-phase="SCISSORS"
 roundSummary=[]
+currentInput=null
 
+phase="SCISSORS"
 updateUI()
 
-interval=setInterval(nextPhase,phaseDuration)
+/* 0s → SCISSORS */
+setTimeout(()=>{
+phase="ROCK"
+currentInput=null
+updateUI()
+},1000)
+
+/* 2s → 判定 ROCK */
+setTimeout(()=>{
+resolvePhase("ROCK")
+
+/* 若已結束就不進 PAPER */
+if(!holding) return
+
+phase="PAPER"
+currentInput=null
+updateUI()
+
+},2000)
+
+/* 3s → 判定 PAPER */
+setTimeout(()=>{
+if(!holding) return
+resolvePhase("PAPER")
+endRound()
+},3000)
 
 }
 
-function nextPhase(){
+/* ===== 判定 ===== */
 
-phaseActed=false   // ⭐ 每進新階段重置
+function resolvePhase(p){
 
-if(phase==="SCISSORS") phase="ROCK"
-else if(phase==="ROCK") phase="PAPER"
-else{
-endRound()
+let player = currentInput || "未出招"
+let enemy = enemyMove()
+
+let text=`${p} ${player} vs ${enemy} → `
+
+if(player==="未出招"){
+text+="錯過"
+roundSummary.push(text)
 return
 }
 
-updateUI()
-
-}
-
-/* ===== 出招 ===== */
-
-function handleMove(move){
-
-if(!holding) return
-if(phase==="SCISSORS") return
-
-if(phaseActed) return   // ⭐ 防止同階段多次觸發
-phaseActed=true
-
-let enemy=enemyMove()
-let result=judge(move,enemy)
-
-let text=`${phase} ${move} vs ${enemy} → `
+let result=judge(player,enemy)
 
 if(result===1){
 hpB-=DAMAGE
@@ -118,19 +130,11 @@ text+=`平手`
 }
 
 roundSummary.push(text)
-
 updateUI()
 
-/* ROCK 結束 */
-if(phase==="ROCK"&&(move==="石頭"||enemy==="石頭")){
+/* ROCK 結束條件 */
+if(p==="ROCK" && (player==="石頭"||enemy==="石頭")){
 endRound()
-return
-}
-
-/* PAPER 結束 */
-if(phase==="PAPER"){
-endRound()
-return
 }
 
 }
@@ -139,8 +143,6 @@ return
 
 function endRound(){
 
-clearInterval(interval)
-interval=null
 holding=false
 
 let finalText=`第${roundCount}回合：<br>`+
@@ -166,6 +168,7 @@ startRound()
 pad.addEventListener("touchmove",e=>{
 
 if(!holding) return
+if(phase==="SCISSORS") return
 
 let x=e.touches[0].clientX-startX
 let y=e.touches[0].clientY-startY
@@ -174,9 +177,9 @@ let dist=Math.sqrt(x*x+y*y)
 if(dist<30) return
 
 if(Math.abs(x)>Math.abs(y)){
-handleMove(x>0?"布":"剪刀")
+currentInput = x>0?"布":"剪刀"
 }else{
-handleMove(y<0?"石頭":"不要")
+currentInput = y<0?"石頭":"不要"
 }
 
 })
