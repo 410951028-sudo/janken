@@ -65,10 +65,10 @@ font-size:22px;
 
 <div id="pad">
 
-<div id="up" class="dir">石頭</div>
-<div id="down" class="dir">❌</div>
-<div id="left" class="dir"> 🖐️</div>
-<div id="right" class="dir">✌️</div>
+<div id="up" class="dir">up</div>
+<div id="down" class="dir">down </div>
+<div id="left" class="dir">left</div>
+<div id="right" class="dir">right</div>
 
 <canvas id="ring"></canvas>
 
@@ -89,7 +89,7 @@ canvas.width = pad.offsetWidth
 canvas.height = pad.offsetHeight
 
 const dirs = {
-up:document.getElementById("石頭"),
+up:document.getElementById("✊"),
 down:document.getElementById("❌"),
 left:document.getElementById("🖐️"),
 right:document.getElementById("✌️")
@@ -218,10 +218,10 @@ let angle = Math.atan2(dy,dx)*180/Math.PI
 
 let dir
 
-if(angle>=-45&&angle<=45) dir="right"
-else if(angle>45&&angle<135) dir="down"
-else if(angle>=135||angle<=-135) dir="left"
-else dir="up"
+if(angle>=-45&&angle<=45) dir="✌️"
+else if(angle>45&&angle<135) dir="❌"
+else if(angle>=135||angle<=-135) dir="🖐️"
+else dir="✊"
 
 vibrate([50,30,50])
 
