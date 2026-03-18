@@ -112,6 +112,7 @@ const state = {
 startX: 0,
 startY: 0,
 charging: false,
+charged: false,
 triggered: false,
 chargeStart: 0,
 loop: null
@@ -124,7 +125,7 @@ const config = {
 follow: 60,
 previewDist: 30,
 cancelChargeDist: 35,
-triggerDist: 65
+triggerDist: 65,
 chargeTime: 700
 }
 
@@ -209,20 +210,25 @@ ctx.stroke()
 function startCharge(){
 
 state.charging = true
+state.charged = false
 state.chargeStart = Date.now()
 
 state.loop = setInterval(()=>{
 
-if(!state.charging) return
-
 let progress = (Date.now()-state.chargeStart)/config.chargeTime
 
 if(progress >= 1){
-state.charging = false
+
 drawRing(1)
 vibrate([120,40,120])
 log("🕒")
-}else{
+
+state.charged = true
+stopCharge()
+return
+}
+
+if(state.charging){
 drawRing(progress)
 }
 
@@ -258,6 +264,13 @@ let dir = getDir(dx, dy)
 vibrate([50,30,50])
 setActive(dir)
 logAction(dir)
+
+/* 🔥 核心輸出（之後接戰鬥） */
+console.log({
+dir: dir,
+charged: state.charged
+})
+
 }
 
 function handleCancelCharge(dist){
