@@ -5,7 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>操作盤優化版</title>
 
+<!-- ================= CSS ================= -->
 <style>
+
 body{
 margin:0;
 height:100vh;
@@ -38,7 +40,6 @@ font-size:24px;
 transition:0.1s;
 }
 
-/* ⭐ 高亮效果 */
 .dir.active{
 background:#0af;
 transform:scale(1.2);
@@ -57,7 +58,6 @@ left:80px;
 top:80px;
 background:#666;
 border-radius:50%;
-/* ⭐ 回彈手感 */
 transition:0.12s cubic-bezier(.2,1.5,.4,1);
 }
 
@@ -66,11 +66,13 @@ position:absolute;
 bottom:40px;
 font-size:22px;
 }
+
 </style>
 </head>
 
 <body>
 
+<!-- ================= HTML ================= -->
 <div id="pad">
 
 <div id="up" class="dir">↑</div>
@@ -86,8 +88,10 @@ font-size:22px;
 
 <div id="log">等待操作</div>
 
+<!-- ================= JS ================= -->
 <script>
 
+// ===== DOM =====
 const pad = document.getElementById("pad")
 const centerEl = document.getElementById("center")
 const canvas = document.getElementById("ring")
@@ -102,13 +106,22 @@ down:document.getElementById("down"),
 left:document.getElementById("left"),
 right:document.getElementById("right")
 }
-
+  
+const actionMap = {
+up: "✊",
+right: "✋",
+left: "✌️",
+down: "❌"
+}
+  
+// ===== 狀態 =====
 let startX, startY
 let charging = false
 let triggered = false
 let chargeStart = 0
 let loop = null
 
+// ===== 工具 =====
 function vibrate(p){
 if(navigator.vibrate) navigator.vibrate(p)
 }
@@ -123,7 +136,7 @@ function log(t){
 document.getElementById("log").innerText=t
 }
 
-/* 畫蓄力圈 */
+// ===== 畫蓄力圈 =====
 function drawRing(progress){
 
 ctx.clearRect(0,0,canvas.width,canvas.height)
@@ -140,7 +153,7 @@ ctx.lineWidth=6
 ctx.stroke()
 }
 
-/* 蓄力 loop */
+// ===== 蓄力 =====
 function startChargeLoop(){
 
 loop = setInterval(()=>{
@@ -170,7 +183,7 @@ clearInterval(loop)
 ctx.clearRect(0,0,canvas.width,canvas.height)
 }
 
-/* touchstart */
+// ===== 觸控開始 =====
 pad.addEventListener("touchstart",e=>{
 
 const t = e.touches[0]
@@ -188,7 +201,7 @@ vibrate(10)
 
 })
 
-/* touchmove */
+// ===== 觸控移動 =====
 pad.addEventListener("touchmove",e=>{
 
 const t = e.touches[0]
@@ -198,21 +211,21 @@ let dy = t.clientY - startY
 
 let dist = Math.sqrt(dx*dx + dy*dy)
 
-/* 蘑菇頭移動 */
-let follow = 45
+/* 蘑菇頭 */
+let follow = 60
 let mx = Math.max(-follow, Math.min(follow, dx))
 let my = Math.max(-follow, Math.min(follow, dy))
 
 centerEl.style.transform =
 `translate(${mx}px,${my}px)`
 
-/* ⭐ 容錯提升（避免誤取消） */
+/* 蓄力取消 */
 if(dist > 35 && charging){
 charging = false
 stopChargeLoop()
 }
 
-/* ⭐ 即時方向預覽 */
+/* 即時預覽 */
 if(dist > 30 && !triggered){
 
 let angle = Math.atan2(dy,dx)*180/Math.PI
@@ -227,7 +240,7 @@ clearActive()
 dirs[dir].classList.add("active")
 }
 
-/* ⭐ 真正觸發 */
+/* 真正觸發 */
 let threshold = 75
 
 if(dist > threshold && !triggered){
@@ -249,12 +262,12 @@ vibrate([50,30,50])
 clearActive()
 dirs[dir].classList.add("active")
 
-log("撥動："+dir)
+log(actionMap[dir])
 }
 
 })
 
-/* touchend */
+// ===== 觸控結束 =====
 pad.addEventListener("touchend",()=>{
 
 charging = false
@@ -262,7 +275,6 @@ stopChargeLoop()
 
 centerEl.style.transform="translate(0,0)"
 
-/* ⭐ 結果停留 */
 setTimeout(()=>{
 clearActive()
 log("等待操作")
