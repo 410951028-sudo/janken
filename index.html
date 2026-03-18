@@ -75,10 +75,10 @@ font-size:22px;
 <!-- ================= HTML ================= -->
 <div id="pad">
 
-<div id="up" class="dir">↑</div>
-<div id="down" class="dir">↓</div>
-<div id="left" class="dir">←</div>
-<div id="right" class="dir">→</div>
+<div id="up" class="dir">✊</div>
+<div id="down" class="dir">❌</div>
+<div id="left" class="dir">🖐️</div>
+<div id="right" class="dir">✌️</div>
 
 <canvas id="ring"></canvas>
 
@@ -89,41 +89,62 @@ font-size:22px;
 <div id="log">等待操作</div>
 
 <!-- ================= JS ================= -->
+
 <script>
-
-// ===== DOM =====
-const pad = document.getElementById("pad")
-const centerEl = document.getElementById("center")
-const canvas = document.getElementById("ring")
-const ctx = canvas.getContext("2d")
-
-canvas.width = pad.offsetWidth
-canvas.height = pad.offsetHeight
-
-const dirs = {
-up:document.getElementById("up"),
-down:document.getElementById("down"),
-left:document.getElementById("left"),
-right:document.getElementById("right")
+/* =========================
+   🎮 狀態 State
+========================= */
+const state = {
+startX: 0,
+startY: 0,
+charging: false,
+triggered: false,
+chargeStart: 0,
+loop: null
 }
-  
+
+/* =========================
+   🧩 設定 Config
+========================= */
+const config = {
+follow: 60,
+previewDist: 30,
+cancelChargeDist: 35,
+triggerDist: 65
+}
+
+/* =========================
+   🗺️ 對應 Mapping
+========================= */
 const actionMap = {
 up: "✊",
-right: "✋",
+right: "🖐️",
 left: "✌️",
 down: "❌"
 }
-  
-// ===== 狀態 =====
-let startX, startY
-let charging = false
-let triggered = false
-let chargeStart = 0
-let loop = null
 
-// ===== 工具 =====
+/* =========================
+   🔧 工具 Utils
+========================= */
 function vibrate(p){
 if(navigator.vibrate) navigator.vibrate(p)
+}
+
+function getDir(dx, dy){
+let angle = Math.atan2(dy,dx)*180/Math.PI
+
+if(angle>=-45&&angle<=45) return "right"
+if(angle>45&&angle<135) return "down"
+if(angle>=135||angle<=-135) return "left"
+return "up"
+}
+
+/* =========================
+   🎨 UI 控制
+========================= */
+function setActive(dir){
+clearActive()
+if(dir) dirs[dir].classList.add("active")
 }
 
 function clearActive(){
@@ -132,148 +153,120 @@ dirs[d].classList.remove("active")
 }
 }
 
-function log(t){
-document.getElementById("log").innerText=t
+function logAction(dir){
+log(actionMap[dir])
 }
 
-// ===== 畫蓄力圈 =====
-function drawRing(progress){
-
-ctx.clearRect(0,0,canvas.width,canvas.height)
-
-let cx = canvas.width/2
-let cy = canvas.height/2
-
-ctx.beginPath()
-ctx.arc(cx, cy, 60, -Math.PI/2,
-(-Math.PI/2)+(Math.PI*2*progress))
-
-ctx.strokeStyle="#0af"
-ctx.lineWidth=6
-ctx.stroke()
+function moveStick(dx, dy){
+let f = config.follow
+let mx = Math.max(-f, Math.min(f, dx))
+let my = Math.max(-f, Math.min(f, dy))
+centerEl.style.transform = `translate(${mx}px,${my}px)`
 }
 
-// ===== 蓄力 =====
-function startChargeLoop(){
+function resetStick(){
+centerEl.style.transform = "translate(0,0)"
+}
 
-loop = setInterval(()=>{
+/* =========================
+   ⏳ 蓄力系統
+========================= */
+function startCharge(){
 
-if(!charging) return
+state.charging = true
+state.chargeStart = Date.now()
 
-let progress = (Date.now()-chargeStart)/1000
+state.loop = setInterval(()=>{
 
-if(progress >= 1){
+if(!state.charging) return
 
-charging = false
+let progress = (Date.now()-state.chargeStart)/700
+
+if(progress >= 0.7){
+state.charging = false
 drawRing(1)
-
 vibrate([120,40,120])
 log("蓄力完成")
-
 }else{
 drawRing(progress)
 }
 
 },16)
-
 }
 
-function stopChargeLoop(){
-clearInterval(loop)
+function stopCharge(){
+clearInterval(state.loop)
 ctx.clearRect(0,0,canvas.width,canvas.height)
+state.charging = false
 }
 
-// ===== 觸控開始 =====
+/* =========================
+   🎯 判定邏輯
+========================= */
+function handlePreview(dx, dy, dist){
+
+if(dist < config.previewDist || state.triggered) return
+
+let dir = getDir(dx, dy)
+setActive(dir)
+}
+
+function handleTrigger(dx, dy, dist){
+
+if(dist < config.triggerDist || state.triggered) return
+
+state.triggered = true
+stopCharge()
+
+let dir = getDir(dx, dy)
+
+vibrate([50,30,50])
+setActive(dir)
+logAction(dir)
+}
+
+function handleCancelCharge(dist){
+if(dist > config.cancelChargeDist && state.charging){
+stopCharge()
+}
+}
+
+/* =========================
+   👆 事件處理
+========================= */
 pad.addEventListener("touchstart",e=>{
 
 const t = e.touches[0]
 
-startX = t.clientX
-startY = t.clientY
+state.startX = t.clientX
+state.startY = t.clientY
+state.triggered = false
 
-charging = true
-triggered = false
-chargeStart = Date.now()
-
-startChargeLoop()
-
+startCharge()
 vibrate(10)
 
 })
 
-// ===== 觸控移動 =====
 pad.addEventListener("touchmove",e=>{
 
 const t = e.touches[0]
 
-let dx = t.clientX - startX
-let dy = t.clientY - startY
-
+let dx = t.clientX - state.startX
+let dy = t.clientY - state.startY
 let dist = Math.sqrt(dx*dx + dy*dy)
 
-/* 蘑菇頭 */
-let follow = 60
-let mx = Math.max(-follow, Math.min(follow, dx))
-let my = Math.max(-follow, Math.min(follow, dy))
+moveStick(dx, dy)
 
-centerEl.style.transform =
-`translate(${mx}px,${my}px)`
-
-/* 蓄力取消 */
-if(dist > 35 && charging){
-charging = false
-stopChargeLoop()
-}
-
-/* 即時預覽 */
-if(dist > 30 && !triggered){
-
-let angle = Math.atan2(dy,dx)*180/Math.PI
-let dir
-
-if(angle>=-45&&angle<=45) dir="right"
-else if(angle>45&&angle<135) dir="down"
-else if(angle>=135||angle<=-135) dir="left"
-else dir="up"
-
-clearActive()
-dirs[dir].classList.add("active")
-}
-
-/* 真正觸發 */
-let threshold = 75
-
-if(dist > threshold && !triggered){
-
-triggered = true
-charging = false
-stopChargeLoop()
-
-let angle = Math.atan2(dy,dx)*180/Math.PI
-let dir
-
-if(angle>=-45&&angle<=45) dir="right"
-else if(angle>45&&angle<135) dir="down"
-else if(angle>=135||angle<=-135) dir="left"
-else dir="up"
-
-vibrate([50,30,50])
-
-clearActive()
-dirs[dir].classList.add("active")
-
-log(actionMap[dir])
-}
+handleCancelCharge(dist)
+handlePreview(dx, dy, dist)
+handleTrigger(dx, dy, dist)
 
 })
 
-// ===== 觸控結束 =====
 pad.addEventListener("touchend",()=>{
 
-charging = false
-stopChargeLoop()
-
-centerEl.style.transform="translate(0,0)"
+stopCharge()
+resetStick()
 
 setTimeout(()=>{
 clearActive()
@@ -281,7 +274,6 @@ log("等待操作")
 },400)
 
 })
-
 </script>
 
 </body>
