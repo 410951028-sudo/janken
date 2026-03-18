@@ -125,6 +125,7 @@ follow: 60,
 previewDist: 30,
 cancelChargeDist: 35,
 triggerDist: 65
+chargeTime: 700
 }
 
 /* =========================
@@ -214,7 +215,7 @@ state.loop = setInterval(()=>{
 
 if(!state.charging) return
 
-let progress = (Date.now()-state.chargeStart)/1000
+let progress = (Date.now()-state.chargeStart)/config.chargeTime
 
 if(progress >= 1){
 state.charging = false
