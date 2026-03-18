@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>操作盤穩定版</title>
+<title>操作盤優化版</title>
 
 <style>
 body{
@@ -35,6 +35,13 @@ display:flex;
 align-items:center;
 justify-content:center;
 font-size:24px;
+transition:0.1s;
+}
+
+/* ⭐ 高亮效果 */
+.dir.active{
+background:#0af;
+transform:scale(1.2);
 }
 
 #up{top:10px;left:95px}
@@ -50,7 +57,8 @@ left:80px;
 top:80px;
 background:#666;
 border-radius:50%;
-transition:0.05s;
+/* ⭐ 回彈手感 */
+transition:0.12s cubic-bezier(.2,1.5,.4,1);
 }
 
 #log{
@@ -65,10 +73,10 @@ font-size:22px;
 
 <div id="pad">
 
-<div id="✊" class="dir">✊</div>
-<div id="❌" class="dir">❌</div>
-<div id="🖐️" class="dir">🖐️</div>
-<div id="✌️" class="dir">✌️</div>
+<div id="up" class="dir">↑</div>
+<div id="down" class="dir">↓</div>
+<div id="left" class="dir">←</div>
+<div id="right" class="dir">→</div>
 
 <canvas id="ring"></canvas>
 
@@ -89,10 +97,10 @@ canvas.width = pad.offsetWidth
 canvas.height = pad.offsetHeight
 
 const dirs = {
-✊:document.getElementById("✊"),
-❌:document.getElementById("❌"),
-🖐️:document.getElementById("🖐️"),
-✌️:document.getElementById("✌️")
+up:document.getElementById("up"),
+down:document.getElementById("down"),
+left:document.getElementById("left"),
+right:document.getElementById("right")
 }
 
 let startX, startY
@@ -115,7 +123,7 @@ function log(t){
 document.getElementById("log").innerText=t
 }
 
-/* 畫圈（貼著蘑菇頭） */
+/* 畫蓄力圈 */
 function drawRing(progress){
 
 ctx.clearRect(0,0,canvas.width,canvas.height)
@@ -132,22 +140,21 @@ ctx.lineWidth=6
 ctx.stroke()
 }
 
-/* ⭐ 核心修正：時間驅動 */
+/* 蓄力 loop */
 function startChargeLoop(){
 
 loop = setInterval(()=>{
 
 if(!charging) return
 
-let progress = (Date.now()-chargeStart)/600
+let progress = (Date.now()-chargeStart)/1000
 
-if(progress >= 0.6){
+if(progress >= 1){
 
 charging = false
 drawRing(1)
 
 vibrate([120,40,120])
-
 log("蓄力完成")
 
 }else{
@@ -175,7 +182,7 @@ charging = true
 triggered = false
 chargeStart = Date.now()
 
-startChargeLoop()   // ⭐ 修正點
+startChargeLoop()
 
 vibrate(10)
 
@@ -191,21 +198,36 @@ let dy = t.clientY - startY
 
 let dist = Math.sqrt(dx*dx + dy*dy)
 
-/* 蘑菇頭浮動 */
-let follow = 60
+/* 蘑菇頭移動 */
+let follow = 45
 let mx = Math.max(-follow, Math.min(follow, dx))
 let my = Math.max(-follow, Math.min(follow, dy))
 
 centerEl.style.transform =
 `translate(${mx}px,${my}px)`
 
-/* ⭐ 容錯（避免手抖取消蓄力） */
-if(dist > 20 && charging){
+/* ⭐ 容錯提升（避免誤取消） */
+if(dist > 35 && charging){
 charging = false
 stopChargeLoop()
 }
 
-/* 撥動 */
+/* ⭐ 即時方向預覽 */
+if(dist > 30 && !triggered){
+
+let angle = Math.atan2(dy,dx)*180/Math.PI
+let dir
+
+if(angle>=-45&&angle<=45) dir="right"
+else if(angle>45&&angle<135) dir="down"
+else if(angle>=135||angle<=-135) dir="left"
+else dir="up"
+
+clearActive()
+dirs[dir].classList.add("active")
+}
+
+/* ⭐ 真正觸發 */
 let threshold = 75
 
 if(dist > threshold && !triggered){
@@ -215,13 +237,12 @@ charging = false
 stopChargeLoop()
 
 let angle = Math.atan2(dy,dx)*180/Math.PI
-
 let dir
 
-if(angle>=-45&&angle<=45) dir="✌️"
-else if(angle>45&&angle<135) dir="✊"
-else if(angle>=135||angle<=-135) dir="🖐️"
-else dir="❌"
+if(angle>=-45&&angle<=45) dir="right"
+else if(angle>45&&angle<135) dir="down"
+else if(angle>=135||angle<=-135) dir="left"
+else dir="up"
 
 vibrate([50,30,50])
 
@@ -240,7 +261,12 @@ charging = false
 stopChargeLoop()
 
 centerEl.style.transform="translate(0,0)"
+
+/* ⭐ 結果停留 */
+setTimeout(()=>{
 clearActive()
+log("等待操作")
+},400)
 
 })
 
