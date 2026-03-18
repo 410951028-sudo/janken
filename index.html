@@ -3,36 +3,44 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
-<title>猜拳戰鬥測試</title>
+<title>操作盤穩定版</title>
 
 <style>
 body{
 margin:0;
+height:100vh;
+display:flex;
+justify-content:center;
+align-items:center;
 background:#111;
 color:white;
-text-align:center;
-font-family:sans-serif;
-}
-
-#game{
-margin-top:20px;
-}
-
-.hp{
-font-size:20px;
-margin:5px;
 }
 
 #pad{
 width:260px;
 height:260px;
-margin:20px auto;
 border-radius:50%;
 background:#222;
 position:relative;
 touch-action:none;
 }
+
+.dir{
+position:absolute;
+width:70px;
+height:70px;
+background:#444;
+border-radius:12px;
+display:flex;
+align-items:center;
+justify-content:center;
+font-size:24px;
+}
+
+#up{top:10px;left:95px}
+#down{bottom:10px;left:95px}
+#left{left:10px;top:95px}
+#right{right:10px;top:95px}
 
 #center{
 position:absolute;
@@ -46,33 +54,46 @@ transition:0.05s;
 }
 
 #log{
-margin-top:10px;
-font-size:18px;
+position:absolute;
+bottom:40px;
+font-size:22px;
 }
-
 </style>
 </head>
 
 <body>
 
-<div id="game">
-<div class="hp">玩家HP: <span id="hpA">2000</span></div>
-<div class="hp">敵人HP: <span id="hpB">2000</span></div>
-</div>
-
 <div id="pad">
+
+<div id="up" class="dir">↑</div>
+<div id="down" class="dir">↓</div>
+<div id="left" class="dir">←</div>
+<div id="right" class="dir">→</div>
+
+<canvas id="ring"></canvas>
+
 <div id="center"></div>
+
 </div>
 
-<div id="log">開始戰鬥</div>
+<div id="log">等待操作</div>
 
 <script>
 
-let hpA = 2000
-let hpB = 2000
-
 const pad = document.getElementById("pad")
 const centerEl = document.getElementById("center")
+const canvas = document.getElementById("ring")
+const ctx = canvas.getContext("2d")
+
+canvas.width = pad.offsetWidth
+canvas.height = pad.offsetHeight
+
+const dirs = {
+up:document.getElementById("up"),
+down:document.getElementById("down"),
+left:document.getElementById("left"),
+right:document.getElementById("right")
+}
 
 let startX, startY
 let charging = false
@@ -84,56 +105,36 @@ function vibrate(p){
 if(navigator.vibrate) navigator.vibrate(p)
 }
 
+function clearActive(){
+for(let d in dirs){
+dirs[d].classList.remove("active")
+}
+}
+
 function log(t){
 document.getElementById("log").innerText=t
 }
 
-function updateHP(){
-document.getElementById("hpA").innerText = hpA
-document.getElementById("hpB").innerText = hpB
+/* 畫圈（貼著蘑菇頭） */
+function drawRing(progress){
+
+ctx.clearRect(0,0,canvas.width,canvas.height)
+
+let cx = canvas.width/2
+let cy = canvas.height/2
+
+ctx.beginPath()
+ctx.arc(cx, cy, 60, -Math.PI/2,
+(-Math.PI/2)+(Math.PI*2*progress))
+
+ctx.strokeStyle="#0af"
+ctx.lineWidth=6
+ctx.stroke()
 }
 
-/* 猜拳判定 */
-function resolve(player){
-
-const choices = ["石頭","布","剪刀","不出"]
-let enemy = choices[Math.floor(Math.random()*3)]
-
-if(player === "不出"){
-log("你防禦，敵人出："+enemy)
-return
-}
-
-if(player === "空"){
-log("你略過")
-return
-}
-
-let result = ""
-
-if(player === enemy){
-result = "平手"
-}
-else if(
-(player==="石頭" && enemy==="剪刀")||
-(player==="布" && enemy==="石頭")||
-(player==="剪刀" && enemy==="布")
-){
-result = "你贏"
-hpB -= 200
-}else{
-result = "你輸"
-hpA -= 200
-}
-
-updateHP()
-
-log(`你:${player} vs 敵:${enemy} → ${result}`)
-
-}
-
-/* 蓄力 */
+/* ⭐ 核心修正：時間驅動 */
 function startChargeLoop(){
+
 loop = setInterval(()=>{
 
 if(!charging) return
@@ -141,19 +142,28 @@ if(!charging) return
 let progress = (Date.now()-chargeStart)/1000
 
 if(progress >= 1){
+
 charging = false
-vibrate([100,30,100])
-resolve("不出")
+drawRing(1)
+
+vibrate([120,40,120])
+
+log("蓄力完成")
+
+}else{
+drawRing(progress)
 }
 
 },16)
+
 }
 
 function stopChargeLoop(){
 clearInterval(loop)
+ctx.clearRect(0,0,canvas.width,canvas.height)
 }
 
-/* start */
+/* touchstart */
 pad.addEventListener("touchstart",e=>{
 
 const t = e.touches[0]
@@ -165,13 +175,13 @@ charging = true
 triggered = false
 chargeStart = Date.now()
 
-startChargeLoop()
+startChargeLoop()   // ⭐ 修正點
 
 vibrate(10)
 
 })
 
-/* move */
+/* touchmove */
 pad.addEventListener("touchmove",e=>{
 
 const t = e.touches[0]
@@ -181,7 +191,7 @@ let dy = t.clientY - startY
 
 let dist = Math.sqrt(dx*dx + dy*dy)
 
-/* 浮動 */
+/* 蘑菇頭浮動 */
 let follow = 45
 let mx = Math.max(-follow, Math.min(follow, dx))
 let my = Math.max(-follow, Math.min(follow, dy))
@@ -189,7 +199,7 @@ let my = Math.max(-follow, Math.min(follow, dy))
 centerEl.style.transform =
 `translate(${mx}px,${my}px)`
 
-/* 取消蓄力 */
+/* ⭐ 容錯（避免手抖取消蓄力） */
 if(dist > 20 && charging){
 charging = false
 stopChargeLoop()
@@ -201,31 +211,36 @@ let threshold = 75
 if(dist > threshold && !triggered){
 
 triggered = true
+charging = false
 stopChargeLoop()
 
 let angle = Math.atan2(dy,dx)*180/Math.PI
 
-let move
+let dir
 
-if(angle>=-45&&angle<=45) move="布"
-else if(angle>45&&angle<135) move="空"
-else if(angle>=135||angle<=-135) move="剪刀"
-else move="石頭"
+if(angle>=-45&&angle<=45) dir="right"
+else if(angle>45&&angle<135) dir="down"
+else if(angle>=135||angle<=-135) dir="left"
+else dir="up"
 
 vibrate([50,30,50])
 
-resolve(move)
+clearActive()
+dirs[dir].classList.add("active")
+
+log("撥動："+dir)
 }
 
 })
 
-/* end */
+/* touchend */
 pad.addEventListener("touchend",()=>{
 
 charging = false
 stopChargeLoop()
 
 centerEl.style.transform="translate(0,0)"
+clearActive()
 
 })
 
