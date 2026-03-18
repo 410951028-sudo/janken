@@ -5,9 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>操作盤優化版</title>
 
-<!-- ================= CSS ================= -->
 <style>
-
 body{
 margin:0;
 height:100vh;
@@ -36,13 +34,14 @@ border-radius:12px;
 display:flex;
 align-items:center;
 justify-content:center;
-font-size:24px;
+font-size:28px;
 transition:0.1s;
 }
 
 .dir.active{
 background:#0af;
-transform:scale(1.2);
+transform:scale(1.3);
+box-shadow:0 0 12px #0af;
 }
 
 #up{top:10px;left:95px}
@@ -64,21 +63,19 @@ transition:0.12s cubic-bezier(.2,1.5,.4,1);
 #log{
 position:absolute;
 bottom:40px;
-font-size:22px;
+font-size:32px;
 }
-
 </style>
 </head>
 
 <body>
 
-<!-- ================= HTML ================= -->
 <div id="pad">
 
 <div id="up" class="dir">✊</div>
 <div id="down" class="dir">❌</div>
-<div id="left" class="dir">🖐️</div>
-<div id="right" class="dir">✌️</div>
+<div id="left" class="dir">✌️</div>
+<div id="right" class="dir">✋</div>
 
 <canvas id="ring"></canvas>
 
@@ -88,9 +85,26 @@ font-size:22px;
 
 <div id="log">等待操作</div>
 
-<!-- ================= JS ================= -->
-
 <script>
+
+/* =========================
+   🎮 DOM
+========================= */
+const pad = document.getElementById("pad")
+const centerEl = document.getElementById("center")
+const canvas = document.getElementById("ring")
+const ctx = canvas.getContext("2d")
+
+canvas.width = pad.offsetWidth
+canvas.height = pad.offsetHeight
+
+const dirs = {
+up:document.getElementById("up"),
+down:document.getElementById("down"),
+left:document.getElementById("left"),
+right:document.getElementById("right")
+}
+
 /* =========================
    🎮 狀態 State
 ========================= */
@@ -118,16 +132,20 @@ triggerDist: 65
 ========================= */
 const actionMap = {
 up: "✊",
-right: "🖐️",
+right: "✋",
 left: "✌️",
 down: "❌"
 }
 
 /* =========================
-   🔧 工具 Utils
+   🔧 工具
 ========================= */
 function vibrate(p){
 if(navigator.vibrate) navigator.vibrate(p)
+}
+
+function log(text){
+document.getElementById("log").innerText = text
 }
 
 function getDir(dx, dy){
@@ -140,7 +158,7 @@ return "up"
 }
 
 /* =========================
-   🎨 UI 控制
+   🎨 UI
 ========================= */
 function setActive(dir){
 clearActive()
@@ -169,8 +187,24 @@ centerEl.style.transform = "translate(0,0)"
 }
 
 /* =========================
-   ⏳ 蓄力系統
+   ⏳ 蓄力
 ========================= */
+function drawRing(progress){
+
+ctx.clearRect(0,0,canvas.width,canvas.height)
+
+let cx = canvas.width/2
+let cy = canvas.height/2
+
+ctx.beginPath()
+ctx.arc(cx, cy, 60, -Math.PI/2,
+(-Math.PI/2)+(Math.PI*2*progress))
+
+ctx.strokeStyle="#0af"
+ctx.lineWidth=6
+ctx.stroke()
+}
+
 function startCharge(){
 
 state.charging = true
@@ -180,13 +214,13 @@ state.loop = setInterval(()=>{
 
 if(!state.charging) return
 
-let progress = (Date.now()-state.chargeStart)/700
+let progress = (Date.now()-state.chargeStart)/1000
 
-if(progress >= 0.7){
+if(progress >= 1){
 state.charging = false
 drawRing(1)
 vibrate([120,40,120])
-log("蓄力完成")
+log("🕒")
 }else{
 drawRing(progress)
 }
@@ -201,7 +235,7 @@ state.charging = false
 }
 
 /* =========================
-   🎯 判定邏輯
+   🎯 判定
 ========================= */
 function handlePreview(dx, dy, dist){
 
@@ -232,7 +266,7 @@ stopCharge()
 }
 
 /* =========================
-   👆 事件處理
+   👆 事件
 ========================= */
 pad.addEventListener("touchstart",e=>{
 
@@ -274,6 +308,7 @@ log("等待操作")
 },400)
 
 })
+
 </script>
 
 </body>
