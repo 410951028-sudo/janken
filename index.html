@@ -139,9 +139,9 @@ loop = setInterval(()=>{
 
 if(!charging) return
 
-let progress = (Date.now()-chargeStart)/700
+let progress = (Date.now()-chargeStart)/600
 
-if(progress >= 0.7){
+if(progress >= 0.6){
 
 charging = false
 drawRing(1)
