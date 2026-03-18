@@ -218,10 +218,10 @@ let angle = Math.atan2(dy,dx)*180/Math.PI
 
 let dir
 
-if(angle>=-45&&angle<=45) dir="✌️"
-else if(angle>45&&angle<135) dir="❌"
-else if(angle>=135||angle<=-135) dir="🖐️"
-else dir="✊"
+if(angle>=-45&&angle<=45) dir="right"
+else if(angle>45&&angle<135) dir="up"
+else if(angle>=135||angle<=-135) dir="left"
+else dir="down"
 
 vibrate([50,30,50])
 
