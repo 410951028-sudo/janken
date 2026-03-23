@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>操作盤優化版</title>
+<title>操作盤＋戰鬥測試</title>
 
 <style>
 body{
@@ -14,6 +14,13 @@ justify-content:center;
 align-items:center;
 background:#111;
 color:white;
+flex-direction:column;
+}
+
+#phaseText{
+position:absolute;
+top:40px;
+font-size:40px;
 }
 
 #pad{
@@ -63,105 +70,203 @@ transition:0.12s cubic-bezier(.2,1.5,.4,1);
 #log{
 position:absolute;
 bottom:40px;
-font-size:32px;
+font-size:28px;
 }
 </style>
 </head>
 
 <body>
 
-<div id="pad">
+<div id="phaseText">等待開始</div>
 
+<div id="pad">
 <div id="up" class="dir">✊</div>
 <div id="down" class="dir">❌</div>
 <div id="left" class="dir">✌️</div>
 <div id="right" class="dir">🖐️</div>
-
 <canvas id="ring"></canvas>
-
 <div id="center"></div>
-
 </div>
 
-<div id="log">等待操作</div>
+<div id="log">按住開始</div>
 
 <script>
 
 /* =========================
-   🎮 DOM
+   🎮 UI
 ========================= */
-const pad = document.getElementById("pad")
-const centerEl = document.getElementById("center")
-const canvas = document.getElementById("ring")
-const ctx = canvas.getContext("2d")
 
-canvas.width = pad.offsetWidth
-canvas.height = pad.offsetHeight
+function updatePhaseUI(phase){
+const el = document.getElementById("phaseText")
 
-const dirs = {
+if(phase==="scissors") el.innerText="✂️ 剪刀（預備）"
+if(phase==="rock") el.innerText="🪨 石頭（出招！）"
+if(phase==="paper") el.innerText="📄 布（出招！）"
+if(phase==="end") el.innerText="💥 回合結束"
+}
+
+function log(text){
+document.getElementById("log").innerText=text
+}
+
+/* =========================
+   🎮 戰鬥系統
+========================= */
+
+const PHASE={
+IDLE:"idle",
+SCISSORS:"scissors",
+ROCK:"rock",
+PAPER:"paper",
+END:"end"
+}
+
+let game={
+phase:PHASE.IDLE,
+currentInput:null,
+round:{},
+timers:[]
+}
+
+window.onPlayerInput=function(input){
+if(game.phase!==PHASE.ROCK && game.phase!==PHASE.PAPER) return
+game.currentInput=input
+}
+
+function calcDamage(input,phase){
+if(input==="none"||input==="cancel") return 0
+
+if(input==="scissors"){
+if(phase===PHASE.ROCK) return Math.random()<0.3?900:400
+if(phase===PHASE.PAPER) return Math.random()<0.4?1000:500
+}
+if(input==="rock"){
+if(phase===PHASE.ROCK) return 700
+if(phase===PHASE.PAPER) return 1000
+}
+if(input==="paper"){
+if(phase===PHASE.ROCK) return 900
+if(phase===PHASE.PAPER) return 1100
+}
+return 0
+}
+
+function shouldEnd(input){
+return input==="rock"||input==="paper"
+}
+
+function startRound(){
+clearTimers()
+
+game.phase=PHASE.SCISSORS
+updatePhaseUI(PHASE.SCISSORS)
+
+game.currentInput=null
+game.round={rockPhase:null,paperPhase:null,totalDamage:0}
+
+game.timers.push(setTimeout(startRock,1000))
+}
+
+function startRock(){
+game.phase=PHASE.ROCK
+updatePhaseUI(PHASE.ROCK)
+
+game.currentInput=null
+game.timers.push(setTimeout(endRock,1000))
+}
+
+function endRock(){
+let input=game.currentInput??"none"
+let dmg=calcDamage(input,PHASE.ROCK)
+
+game.round.rockPhase={input,damage:dmg}
+game.round.totalDamage+=dmg
+
+log(`石頭：${input} / ${dmg}`)
+
+if(shouldEnd(input)){
+endRound()
+return
+}
+
+startPaper()
+}
+
+function startPaper(){
+game.phase=PHASE.PAPER
+updatePhaseUI(PHASE.PAPER)
+
+game.currentInput=null
+game.timers.push(setTimeout(endPaper,1000))
+}
+
+function endPaper(){
+let input=game.currentInput??"none"
+let dmg=calcDamage(input,PHASE.PAPER)
+
+game.round.paperPhase={input,damage:dmg}
+game.round.totalDamage+=dmg
+
+log(`布：${input} / ${dmg}`)
+
+endRound()
+}
+
+function endRound(){
+game.phase=PHASE.END
+updatePhaseUI(PHASE.END)
+
+log(`總傷害：${game.round.totalDamage}`)
+}
+
+function clearTimers(){
+game.timers.forEach(t=>clearTimeout(t))
+game.timers=[]
+}
+
+/* =========================
+   🎮 操作盤
+========================= */
+
+const pad=document.getElementById("pad")
+const centerEl=document.getElementById("center")
+const canvas=document.getElementById("ring")
+const ctx=canvas.getContext("2d")
+
+canvas.width=pad.offsetWidth
+canvas.height=pad.offsetHeight
+
+const dirs={
 up:document.getElementById("up"),
 down:document.getElementById("down"),
 left:document.getElementById("left"),
 right:document.getElementById("right")
 }
 
-/* =========================
-   🎮 狀態 State
-========================= */
-const state = {
-startX: 0,
-startY: 0,
-charging: false,
-charged: false,
-triggered: false,
-chargeStart: 0,
-loop: null
+const state={
+startX:0,startY:0,charging:false,charged:false,triggered:false,chargeStart:0,loop:null
 }
 
-/* =========================
-   🧩 設定 Config
-========================= */
-const config = {
-follow: 60,
-previewDist: 30,
-cancelChargeDist: 35,
-triggerDist: 65,
-chargeTime: 500
+const config={
+follow:60,previewDist:30,cancelChargeDist:35,triggerDist:65,chargeTime:500
 }
 
-/* =========================
-   🗺️ 對應 Mapping
-========================= */
-const actionMap = {
-up: "✊",
-right: "🖐️",
-left: "✌️",
-down: "❌"
+function sendInput(input){
+if(window.onPlayerInput) window.onPlayerInput(input)
 }
 
-/* =========================
-   🔧 工具
-========================= */
 function vibrate(p){
 if(navigator.vibrate) navigator.vibrate(p)
 }
 
-function log(text){
-document.getElementById("log").innerText = text
-}
-
-function getDir(dx, dy){
-let angle = Math.atan2(dy,dx)*180/Math.PI
-
+function getDir(dx,dy){
+let angle=Math.atan2(dy,dx)*180/Math.PI
 if(angle>=-45&&angle<=45) return "right"
 if(angle>45&&angle<135) return "down"
 if(angle>=135||angle<=-135) return "left"
 return "up"
 }
 
-/* =========================
-   🎨 UI
-========================= */
 function setActive(dir){
 clearActive()
 if(dir) dirs[dir].classList.add("active")
@@ -173,57 +278,40 @@ dirs[d].classList.remove("active")
 }
 }
 
-function logAction(dir){
-log(actionMap[dir])
-}
-
-function moveStick(dx, dy){
-let f = config.follow
-let mx = Math.max(-f, Math.min(f, dx))
-let my = Math.max(-f, Math.min(f, dy))
-centerEl.style.transform = `translate(${mx}px,${my}px)`
+function moveStick(dx,dy){
+let f=config.follow
+let mx=Math.max(-f,Math.min(f,dx))
+let my=Math.max(-f,Math.min(f,dy))
+centerEl.style.transform=`translate(${mx}px,${my}px)`
 }
 
 function resetStick(){
-centerEl.style.transform = "translate(0,0)"
+centerEl.style.transform="translate(0,0)"
 }
 
-/* =========================
-   ⏳ 蓄力
-========================= */
 function drawRing(progress){
-
 ctx.clearRect(0,0,canvas.width,canvas.height)
-
-let cx = canvas.width/2
-let cy = canvas.height/2
-
+let cx=canvas.width/2
+let cy=canvas.height/2
 ctx.beginPath()
-ctx.arc(cx, cy, 60, -Math.PI/2,
-(-Math.PI/2)+(Math.PI*2*progress))
-
+ctx.arc(cx,cy,60,-Math.PI/2,(-Math.PI/2)+(Math.PI*2*progress))
 ctx.strokeStyle="#0af"
 ctx.lineWidth=6
 ctx.stroke()
 }
 
 function startCharge(){
+state.charging=true
+state.charged=false
+state.chargeStart=Date.now()
 
-state.charging = true
-state.charged = false
-state.chargeStart = Date.now()
+state.loop=setInterval(()=>{
+let progress=(Date.now()-state.chargeStart)/config.chargeTime
 
-state.loop = setInterval(()=>{
-
-let progress = (Date.now()-state.chargeStart)/config.chargeTime
-
-if(progress >= 1){
-
+if(progress>=1){
 drawRing(1)
 vibrate([120,40,120])
-log("蓄力")
-
-state.charged = true
+state.charged=true
 stopCharge()
 return
 }
@@ -231,50 +319,47 @@ return
 if(state.charging){
 drawRing(progress)
 }
-
 },16)
 }
 
 function stopCharge(){
 clearInterval(state.loop)
 ctx.clearRect(0,0,canvas.width,canvas.height)
-state.charging = false
+state.charging=false
 }
 
-/* =========================
-   🎯 判定
-========================= */
-function handlePreview(dx, dy, dist){
-
-if(dist < config.previewDist || state.triggered) return
-
-let dir = getDir(dx, dy)
+function handlePreview(dx,dy,dist){
+if(dist<config.previewDist||state.triggered) return
+let dir=getDir(dx,dy)
 setActive(dir)
 }
 
-function handleTrigger(dx, dy, dist){
+function handleTrigger(dx,dy,dist){
+if(dist<config.triggerDist||state.triggered) return
 
-if(dist < config.triggerDist || state.triggered) return
-
-state.triggered = true
+state.triggered=true
 stopCharge()
 
-let dir = getDir(dx, dy)
+let dir=getDir(dx,dy)
 
 vibrate([50,30,50])
 setActive(dir)
-logAction(dir)
 
-/* 🔥 核心輸出（之後接戰鬥） */
-console.log({
-dir: dir,
-charged: state.charged
-})
+let input=null
+if(dir==="up") input="rock"
+if(dir==="right") input="paper"
+if(dir==="left") input="scissors"
+if(dir==="down") input="cancel"
 
+if(state.charged){
+input="none"
+}
+
+sendInput(input)
 }
 
 function handleCancelCharge(dist){
-if(dist > config.cancelChargeDist && state.charging){
+if(dist>config.cancelChargeDist && state.charging){
 stopCharge()
 }
 }
@@ -282,48 +367,45 @@ stopCharge()
 /* =========================
    👆 事件
 ========================= */
+
 pad.addEventListener("touchstart",e=>{
+const t=e.touches[0]
 
-const t = e.touches[0]
-
-state.startX = t.clientX
-state.startY = t.clientY
-state.triggered = false
+state.startX=t.clientX
+state.startY=t.clientY
+state.triggered=false
 
 startCharge()
 vibrate(10)
 
+// 👉 按住開始回合
+startRound()
 })
 
 pad.addEventListener("touchmove",e=>{
+const t=e.touches[0]
 
-const t = e.touches[0]
+let dx=t.clientX-state.startX
+let dy=t.clientY-state.startY
+let dist=Math.sqrt(dx*dx+dy*dy)
 
-let dx = t.clientX - state.startX
-let dy = t.clientY - state.startY
-let dist = Math.sqrt(dx*dx + dy*dy)
-
-moveStick(dx, dy)
+moveStick(dx,dy)
 
 handleCancelCharge(dist)
-handlePreview(dx, dy, dist)
-handleTrigger(dx, dy, dist)
-
+handlePreview(dx,dy,dist)
+handleTrigger(dx,dy,dist)
 })
 
 pad.addEventListener("touchend",()=>{
-
 stopCharge()
 resetStick()
 
 setTimeout(()=>{
 clearActive()
-log("等待操作")
+log("按住開始")
 },400)
-
 })
 
 </script>
-
 </body>
 </html>
