@@ -17,6 +17,19 @@ color:white;
 flex-direction:column;
 }
 
+/* ⭐ 進度條 */
+#timerBar{
+position:absolute;
+top:0;
+left:0;
+height:6px;
+width:100%;
+background:#0af;
+transform-origin:left;
+transform:scaleX(1);
+transition:transform linear;
+}
+
 #phaseText{
 position:absolute;
 top:40px;
@@ -77,6 +90,8 @@ font-size:28px;
 
 <body>
 
+<div id="timerBar"></div>
+
 <div id="phaseText">等待開始</div>
 
 <div id="pad">
@@ -95,6 +110,21 @@ font-size:28px;
 /* =========================
    🎮 UI
 ========================= */
+
+const timerBar = document.getElementById("timerBar")
+
+function startTimer(duration){
+timerBar.style.transition="none"
+timerBar.style.transform="scaleX(1)"
+timerBar.offsetHeight
+timerBar.style.transition=`transform ${duration}ms linear`
+timerBar.style.transform="scaleX(0)"
+}
+
+function stopTimer(){
+timerBar.style.transition="none"
+timerBar.style.transform="scaleX(0)"
+}
 
 function updatePhaseUI(phase){
 const el = document.getElementById("phaseText")
@@ -160,6 +190,7 @@ clearTimers()
 
 game.phase=PHASE.SCISSORS
 updatePhaseUI(PHASE.SCISSORS)
+startTimer(1000)
 
 game.currentInput=null
 game.round={rockPhase:null,paperPhase:null,totalDamage:0}
@@ -170,6 +201,7 @@ game.timers.push(setTimeout(startRock,1000))
 function startRock(){
 game.phase=PHASE.ROCK
 updatePhaseUI(PHASE.ROCK)
+startTimer(1000)
 
 game.currentInput=null
 game.timers.push(setTimeout(endRock,1000))
@@ -195,6 +227,7 @@ startPaper()
 function startPaper(){
 game.phase=PHASE.PAPER
 updatePhaseUI(PHASE.PAPER)
+startTimer(1000)
 
 game.currentInput=null
 game.timers.push(setTimeout(endPaper,1000))
@@ -215,6 +248,7 @@ endRound()
 function endRound(){
 game.phase=PHASE.END
 updatePhaseUI(PHASE.END)
+stopTimer()
 
 log(`總傷害：${game.round.totalDamage}`)
 }
@@ -364,10 +398,6 @@ stopCharge()
 }
 }
 
-/* =========================
-   👆 事件
-========================= */
-
 pad.addEventListener("touchstart",e=>{
 const t=e.touches[0]
 
@@ -378,7 +408,6 @@ state.triggered=false
 startCharge()
 vibrate(10)
 
-// 👉 按住開始回合
 startRound()
 })
 
