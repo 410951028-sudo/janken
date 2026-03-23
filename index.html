@@ -357,31 +357,39 @@ ctx.stroke()
 }
 
 function startCharge(){
-state.charging=true
-state.charged=false
-state.chargeStart=Date.now()
 
-state.loop=setInterval(()=>{
-let progress=(Date.now()-state.chargeStart)/config.chargeTime
+state.charging = true
+state.charged = false
+state.chargeStart = Date.now()
 
-if(progress>=1){
-drawRing(1)
+state.loop = setInterval(()=>{
+
+if(!state.charging) return
+
+let now = Date.now()
+let elapsed = now - state.chargeStart
+let progress = elapsed / config.chargeTime
+
+if(progress >= 1){
+
+// ⭐ 完成一次蓄力
 vibrate([120,40,120])
-state.charged=true
-stopCharge()
-return
-}
+log("🕒")
 
-if(state.charging){
+state.charged = true
+
+// ⭐ 直接重置時間（關鍵）
+state.chargeStart = now
+
+// ⭐ 重新畫（避免殘影）
+drawRing(0)
+
+}else{
 drawRing(progress)
 }
-},16)
-}
 
-function stopCharge(){
-clearInterval(state.loop)
-ctx.clearRect(0,0,canvas.width,canvas.height)
-state.charging=false
+},16)
+
 }
 
 function handlePreview(dx,dy,dist){
