@@ -83,7 +83,9 @@ transition:0.12s cubic-bezier(.2,1.5,.4,1);
 #log{
 position:absolute;
 bottom:40px;
-font-size:28px;
+font-size:24px;
+white-space:pre-line;
+text-align:center;
 }
 </style>
 </head>
@@ -156,7 +158,7 @@ phase:PHASE.IDLE,
 currentInput:null,
 round:{},
 timers:[],
-lastTotalDamage:null
+lastRoundLog:""
 }
 
 window.onPlayerInput=function(input){
@@ -196,7 +198,7 @@ startTimer(1000)
 game.currentInput=null
 game.round={rockPhase:null,paperPhase:null,totalDamage:0}
 
-// ⭐ 清除上一回合顯示
+// ⭐ 清除顯示（開始新回合才清）
 log("")
 
 game.timers.push(setTimeout(startRock,1000))
@@ -254,10 +256,23 @@ game.phase=PHASE.END
 updatePhaseUI(PHASE.END)
 stopTimer()
 
-game.lastTotalDamage = game.round.totalDamage
+// ⭐ 組合完整回合紀錄
+let text = ""
+
+if(game.round.rockPhase){
+text += `石頭：${game.round.rockPhase.input} / ${game.round.rockPhase.damage}\n`
+}
+
+if(game.round.paperPhase){
+text += `布：${game.round.paperPhase.input} / ${game.round.paperPhase.damage}\n`
+}
+
+text += `總傷害：${game.round.totalDamage}`
+
+game.lastRoundLog = text
 
 // ⭐ 保留顯示
-log(`總傷害：${game.lastTotalDamage}`)
+log(text)
 }
 
 function clearTimers(){
