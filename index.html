@@ -385,7 +385,7 @@ if(dir==="right") input="paper"
 if(dir==="left") input="scissors"
 if(dir==="down") input="cancel"
 
-if(state.charged){
+if(state.charged && dist < config.previewDist){
 input="none"
 }
 
@@ -408,7 +408,10 @@ state.triggered=false
 startCharge()
 vibrate(10)
 
+// ⭐ 修正：避免每次觸控都重開回合
+if(game.phase === PHASE.IDLE || game.phase === PHASE.END){
 startRound()
+}
 })
 
 pad.addEventListener("touchmove",e=>{
