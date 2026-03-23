@@ -155,7 +155,8 @@ let game={
 phase:PHASE.IDLE,
 currentInput:null,
 round:{},
-timers:[]
+timers:[],
+lastTotalDamage:null
 }
 
 window.onPlayerInput=function(input){
@@ -194,6 +195,9 @@ startTimer(1000)
 
 game.currentInput=null
 game.round={rockPhase:null,paperPhase:null,totalDamage:0}
+
+// ⭐ 清除上一回合顯示
+log("")
 
 game.timers.push(setTimeout(startRock,1000))
 }
@@ -250,7 +254,10 @@ game.phase=PHASE.END
 updatePhaseUI(PHASE.END)
 stopTimer()
 
-log(`總傷害：${game.round.totalDamage}`)
+game.lastTotalDamage = game.round.totalDamage
+
+// ⭐ 保留顯示
+log(`總傷害：${game.lastTotalDamage}`)
 }
 
 function clearTimers(){
@@ -408,7 +415,6 @@ state.triggered=false
 startCharge()
 vibrate(10)
 
-// ⭐ 修正：避免每次觸控都重開回合
 if(game.phase === PHASE.IDLE || game.phase === PHASE.END){
 startRound()
 }
@@ -434,7 +440,9 @@ resetStick()
 
 setTimeout(()=>{
 clearActive()
+if(game.phase !== PHASE.END){
 log("按住開始")
+}
 },400)
 })
 
